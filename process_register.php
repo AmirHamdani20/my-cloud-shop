@@ -2,7 +2,7 @@
 // Simple database connection
 $serverName = "tcp:amir-sql-server2.database.windows.net, 1433";
 $connectionOptions = array(
-    "Database" => "myDatabase",
+    "Database" => "AmirDatabase",
     "Uid" => "AdminAmirA",
     "PWD" => getenv('DB_PASSWORD'),
     "Encrypt" => 1,
