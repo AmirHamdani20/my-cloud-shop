@@ -3,8 +3,8 @@
 $serverName = "tcp:amir-sql-server2.database.windows.net, 1433";
 $connectionOptions = array(
     "Database" => "myDatabase",
-    "Uid" => "myadmin",
-    "PWD" => "Abcdefgh0!",
+    "Uid" => "AdminAmirA",
+    "PWD" => getenv('DB_PASSWORD'),
     "Encrypt" => 1,
     "TrustServerCertificate" => 0
 );
@@ -17,6 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Basic validation 
     if (!empty($name) && !empty($email) && !empty($password)) {
+        if ($connectionOptions["PWD"] === false || $connectionOptions["PWD"] === '') {
+            header("Location: register.php?error=Database+password+is+not+configured");
+            exit();
+        }
+
         // Connect to database
         $conn = sqlsrv_connect($serverName, $connectionOptions);
         if ($conn) {
