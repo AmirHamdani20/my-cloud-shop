@@ -1,6 +1,6 @@
 <?php
 // Simple database connection
-$serverName = "tcp:mycardiffmet.database.windows.net, 1433"; 
+$serverName = "tcp:amir-sql-server2.database.windows.net, 1433";
 $connectionOptions = array(
     "Database" => "myDatabase",
     "Uid" => "myadmin",
