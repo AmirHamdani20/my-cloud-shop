@@ -43,11 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                 }
                 // Redirect back with detailed error
-                header("Location: register.html?error=".urlencode($error_message));
+                header("Location: register.php?error=".urlencode($error_message));
                 exit();
             }
         } else {
-            sqlsrv_free_stmt($stmt); sqlsrv_close($conn);
             $connection_errors = sqlsrv_errors();
             $conn_error_message = "Database connection failed: "; 
             if ($connection_errors != null) { 
@@ -55,16 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $conn_error_message .= $error['message'];
                 }
             }
-            header("Location: register.html?error=". urlencode($conn_error_message)); 
+            header("Location: register.php?error=". urlencode($conn_error_message));
             exit();
         } 
     } else {
-        header("Location: register.html?error=Please+fill+all+fields"); 
+        header("Location: register.php?error=Please+fill+all+fields");
         exit();
     }
 } else {
     // If someone tries to access this page directly 
-    header("Location: register.html"); 
+    header("Location: register.php");
     exit();
 }
 ?>
