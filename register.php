@@ -1,76 +1,95 @@
-<!DOCTYPE html>
-<html lang="en"> <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Register - MyShop</title>
-<style> body {font-family: Arial, sans-serif; background-
-    color: #f4f4f4; display: flex; justify-content: center;
-    align-items: center; height: 100vh; margin: 0;
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/db.php';
+
+if (!empty($_SESSION['user_id'])) {
+    header('Location: index.php');
+    exit;
 }
-.header { background-color: #2c3e50; color:
-    white; padding: 20px 0; text-align:
-    center; position: fixed; top: 0; width:
-    100%;
+
+$name = '';
+$email = '';
+$notice = '';
+$noticeType = 'error';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = trim((string) ($_POST['name'] ?? ''));
+    $email = trim((string) ($_POST['email'] ?? ''));
+    $password = (string) ($_POST['password'] ?? '');
+
+    if (!hash_equals($_SESSION['csrf_token'], (string) ($_POST['csrf_token'] ?? ''))) {
+        http_response_code(400);
+        $notice = 'Your request could not be verified. Please refresh the page and try again.';
+    } elseif ($name === '' || mb_strlen($name) > 100) {
+        $notice = 'Enter a name between 1 and 100 characters.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 255) {
+        $notice = 'Enter a valid email address.';
+    } elseif (strlen($password) < 8 || strlen($password) > 4096) {
+        $notice = 'Your password must be at least 8 characters long.';
+    } else {
+        try {
+            $pdo = cloudcartPdo();
+            $insert = $pdo->prepare(
+                "INSERT INTO dbo.shopusers (name, email, password, role, created_at)
+                 VALUES (:name, :email, :password, 'customer', SYSUTCDATETIME())"
+            );
+            $insert->execute([
+                'name' => $name,
+                'email' => $email,
+                'password' => password_hash($password, PASSWORD_DEFAULT),
+            ]);
+            header('Location: login.php?registered=1');
+            exit;
+        } catch (PDOException $exception) {
+            error_log('CloudCart registration database error: ' . $exception->getMessage());
+            if ($exception->getCode() === '23000' || $exception->getCode() === '23505') {
+                $notice = 'An account with that email address already exists.';
+            } else {
+                http_response_code(500);
+                $notice = 'Registration is temporarily unavailable. Please try again later.';
+            }
+        } catch (Throwable $exception) {
+            error_log('CloudCart registration error: ' . $exception->getMessage());
+            http_response_code(500);
+            $notice = 'Registration is temporarily unavailable. Please try again later.';
+        }
+    }
 }
-.register-form { background: white; padding: 30px; border-
-    radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width:
-    100%; max-width: 400px; margin-top: 60px;
-}
-.form-group { margin-bottom: 15px;
-}
-label { display: block; margin-
-    bottom: 5px; font-weight:
-    bold;
-} input[type="text"], input[type="email"],
-input[type="password"] { width: 100%;
-    padding: 10px; border: 1px solid #ddd;
-    border-radius: 4px; box-sizing: border-
-    box;
-}
-.btn { background-color: #007bff; color:
-    white; padding: 10px 20px; border:
-    none; border-radius: 4px; cursor:
-    pointer; width: 100%; font-size: 16px;
-}
-.btn:hover { background-color: #0056b3;
-}
-.error { color: red; padding: 10px; margin:
-    10px 0; background-color: #f8d7da;
-    border: 1px solid #f5c6cb; border-
-    radius: 4px; text-align: center;
-}
-</style>
-</head> <body>
-<div class="header">
-<h1>MyShop</h1>
-<p>Create Your Account</p>
-</div>
-<div class="register-form">
-<h2>Register</h2>
-<!-- Display error message if present --> <?php if
-(isset($_GET['error'])): ?> <div class="error">
-<?php echo htmlspecialchars($_GET['error']); ?> </div>
-<?php endif; ?>
-<!-- Form submits to process_register.php -->
-<form method="post" action="process_register.php"> <div class="form-group">
-<label>Full Name *</label>
-<input type="text" name="name" placeholder="Enter your
-full name" required>
-</div>
-<div class="form-group">
-<label>Email *</label>
-<input type="email" name="email" placeholder="Enter
-your email" required>
-</div>
-<div class="form-group">
-<label>Password *</label>
-<input type="password" name="password" placeholder="Enter your password" required>
-</div>
-<div class="form-group">
-<input type="submit" class="btn" value="Register"> </div>
-</form>
-<p style="text-align: center;"><a href="index.php">Back to Home
-</a></p>
-</div>
-</body>
-</html>
+
+$pageTitle = 'Register';
+require_once __DIR__ . '/header.php';
+?>
+<section class="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
+    <div class="mb-7 text-center">
+        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Create your account</h1>
+        <p class="mt-2 text-sm text-slate-500">Join CloudCart and keep track of your shopping.</p>
+    </div>
+
+    <?php if ($notice !== ''): ?>
+        <div role="alert" class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><?= e($notice) ?></div>
+    <?php endif; ?>
+
+    <form action="register.php" method="post" class="space-y-5">
+        <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
+        <div>
+            <label for="name" class="mb-2 block text-sm font-semibold text-slate-700">Full name</label>
+            <input id="name" name="name" type="text" autocomplete="name" maxlength="100" required value="<?= e($name) ?>" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+        </div>
+        <div>
+            <label for="email" class="mb-2 block text-sm font-semibold text-slate-700">Email address</label>
+            <input id="email" name="email" type="email" autocomplete="email" maxlength="255" required value="<?= e($email) ?>" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+        </div>
+        <div>
+            <label for="password" class="mb-2 block text-sm font-semibold text-slate-700">Password</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+            <p class="mt-1 text-xs text-slate-500">Use at least 8 characters.</p>
+        </div>
+        <button type="submit" class="w-full rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700">Create account</button>
+    </form>
+
+    <p class="mt-6 text-center text-sm text-slate-600">
+        Already have an account? <a href="login.php" class="font-semibold text-indigo-700 hover:text-indigo-900">Sign in</a>
+    </p>
+</section>
+<?php require_once __DIR__ . '/footer.php'; ?>

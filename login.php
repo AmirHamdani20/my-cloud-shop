@@ -3,13 +3,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 
-$allowedRedirects = ['index.php', 'cart.php', 'checkout.php', 'orders.php', 'wishlist.php'];
+$allowedRedirects = ['index.php', 'cart.php', 'checkout.php', 'orders.php', 'wishlist.php', 'admin.php'];
 $redirectTo = (string) ($_POST['redirect'] ?? $_GET['redirect'] ?? 'index.php');
 if (!in_array($redirectTo, $allowedRedirects, true)) {
     $redirectTo = 'index.php';
 }
 
-if (!empty($_SESSION['user_id']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (!empty($_SESSION['user_id'])) {
     header('Location: ' . $redirectTo);
     exit;
 }
@@ -17,6 +17,10 @@ if (!empty($_SESSION['user_id']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
 $notice = '';
 $noticeType = 'error';
 $email = '';
+if (($_GET['registered'] ?? '') === '1') {
+    $notice = 'Your account is ready. Sign in to continue.';
+    $noticeType = 'success';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim((string) ($_POST['email'] ?? ''));
@@ -31,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo = cloudcartPdo();
             $query = $pdo->prepare(
-                'SELECT id, name, email, password
+                'SELECT id, name, email, password, role, mfa_enabled
                  FROM dbo.shopusers
                  WHERE email = :email'
             );
@@ -39,10 +43,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $query->fetch();
 
             if ($user && is_string($user['password']) && password_verify($password, $user['password'])) {
+                if ((bool) $user['mfa_enabled']) {
+                    $_SESSION['pending_mfa_user_id'] = (int) $user['id'];
+                    $_SESSION['pending_mfa_started_at'] = time();
+                    $_SESSION['pending_mfa_redirect'] = $redirectTo;
+                    unset($_SESSION['user_id'], $_SESSION['name'], $_SESSION['email'], $_SESSION['role']);
+                    header('Location: verify-mfa.php');
+                    exit;
+                }
+
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = (int) $user['id'];
                 $_SESSION['name'] = (string) $user['name'];
                 $_SESSION['email'] = (string) $user['email'];
+                $_SESSION['role'] = (string) $user['role'];
                 header('Location: ' . $redirectTo);
                 exit;
             }
@@ -66,7 +80,7 @@ require_once __DIR__ . '/header.php';
     </div>
 
     <?php if ($notice !== ''): ?>
-        <div role="alert" class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div role="<?= $noticeType === 'error' ? 'alert' : 'status' ?>" class="mb-5 rounded-lg border px-4 py-3 text-sm <?= $noticeType === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800' ?>">
             <?= e($notice) ?>
         </div>
     <?php endif; ?>

@@ -31,6 +31,9 @@ if (isset($_SESSION['flash_notice'])) {
                 <a href="wishlist.php" class="hidden text-slate-600 hover:text-indigo-700 sm:inline">Wishlist</a>
                 <?php if (!empty($_SESSION['user_id'])): ?>
                     <a href="orders.php" class="hidden text-slate-600 hover:text-indigo-700 sm:inline">Orders</a>
+                    <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+                        <a href="admin.php" class="hidden text-slate-600 hover:text-indigo-700 sm:inline">Admin</a>
+                    <?php endif; ?>
                     <span class="hidden text-slate-600 md:inline">Hi, <?= e($_SESSION['name'] ?? 'My Account') ?></span>
                     <form action="index.php" method="post" class="inline">
                         <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">

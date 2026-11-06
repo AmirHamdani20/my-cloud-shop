@@ -32,7 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notice = 'Your request could not be verified. Please refresh the page and try again.';
         $noticeType = 'error';
     } elseif (($_POST['action'] ?? '') === 'logout') {
-        unset($_SESSION['user_id'], $_SESSION['name']);
+        unset(
+            $_SESSION['user_id'],
+            $_SESSION['name'],
+            $_SESSION['email'],
+            $_SESSION['role'],
+            $_SESSION['pending_mfa_user_id'],
+            $_SESSION['pending_mfa_started_at'],
+            $_SESSION['pending_mfa_redirect'],
+            $_SESSION['pending_mfa_attempts']
+        );
+        session_regenerate_id(true);
         header('Location: index.php');
         exit;
     }
