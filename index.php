@@ -308,9 +308,9 @@ $userName = (string) ($_SESSION['name'] ?? 'My Account');
                             </div>
                             <p class="mt-3 text-xl font-bold text-indigo-700">$<?= h(number_format((float) $product['price'], 2)) ?></p>
                             <div class="mt-5 flex gap-2">
-                                <form action="index.php" method="post" class="flex-1">
+                                <form action="cart.php" method="post" class="flex-1">
                                     <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
-                                    <input type="hidden" name="action" value="add_to_cart">
+                                    <input type="hidden" name="action" value="add">
                                     <input type="hidden" name="product_id" value="<?= h($product['id']) ?>">
                                     <button type="submit" <?= !$inStock ? 'disabled' : '' ?> class="w-full rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">
                                         Add to Cart
