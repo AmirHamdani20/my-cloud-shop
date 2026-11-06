@@ -59,7 +59,7 @@ if (!$databasePassword) {
             $action = (string) ($_POST['action'] ?? '');
             $productId = filter_var($_POST['product_id'] ?? null, FILTER_VALIDATE_INT);
 
-            if (!in_array($action, ['add_to_cart', 'add_to_wishlist'], true) || !$productId || $productId < 1) {
+            if ($action !== 'add_to_cart' || !$productId || $productId < 1) {
                 http_response_code(400);
                 $notice = 'The requested product action is invalid.';
                 $noticeType = 'error';
@@ -89,31 +89,6 @@ if (!$databasePassword) {
                         header('Location: index.php');
                         exit;
                     }
-                } elseif (empty($_SESSION['user_id'])) {
-                    $notice = 'Please sign in before adding items to your wishlist.';
-                    $noticeType = 'error';
-                } else {
-                    $wishlistCheck = $pdo->prepare(
-                        'SELECT id FROM dbo.wishlists WHERE user_id = :user_id AND product_id = :product_id'
-                    );
-                    $wishlistCheck->execute([
-                        'user_id' => (int) $_SESSION['user_id'],
-                        'product_id' => $productId,
-                    ]);
-
-                    if (!$wishlistCheck->fetch()) {
-                        $wishlistInsert = $pdo->prepare(
-                            'INSERT INTO dbo.wishlists (user_id, product_id) VALUES (:user_id, :product_id)'
-                        );
-                        $wishlistInsert->execute([
-                            'user_id' => (int) $_SESSION['user_id'],
-                            'product_id' => $productId,
-                        ]);
-                    }
-
-                    $_SESSION['flash_notice'] = 'Product added to your wishlist.';
-                    header('Location: index.php');
-                    exit;
                 }
             }
         }
@@ -326,9 +301,9 @@ $userName = (string) ($_SESSION['name'] ?? 'My Account');
                                         Add to Cart
                                     </button>
                                 </form>
-                                <form action="index.php" method="post">
+                                <form action="wishlist.php" method="post">
                                     <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
-                                    <input type="hidden" name="action" value="add_to_wishlist">
+                                    <input type="hidden" name="action" value="add">
                                     <input type="hidden" name="product_id" value="<?= h($product['id']) ?>">
                                     <button type="submit" class="rounded-lg border border-slate-300 p-2.5 text-slate-600 hover:border-rose-300 hover:text-rose-600" aria-label="Add <?= h($product['name']) ?> to wishlist">
                                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">

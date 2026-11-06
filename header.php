@@ -30,6 +30,7 @@ if (isset($_SESSION['flash_notice'])) {
                 <a href="cart.php" class="text-slate-600 hover:text-indigo-700">Cart <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-700"><?= e($cartCount) ?></span></a>
                 <a href="wishlist.php" class="hidden text-slate-600 hover:text-indigo-700 sm:inline">Wishlist</a>
                 <?php if (!empty($_SESSION['user_id'])): ?>
+                    <a href="orders.php" class="hidden text-slate-600 hover:text-indigo-700 sm:inline">Orders</a>
                     <span class="hidden text-slate-600 md:inline">Hi, <?= e($_SESSION['name'] ?? 'My Account') ?></span>
                     <form action="index.php" method="post" class="inline">
                         <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
