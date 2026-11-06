@@ -32,7 +32,7 @@ if (isset($_SESSION['flash_notice'])) {
                 <?php if (!empty($_SESSION['user_id'])): ?>
                     <a href="orders.php" class="hidden text-slate-600 hover:text-indigo-700 sm:inline">Orders</a>
                     <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-                        <a href="admin.php" class="hidden text-slate-600 hover:text-indigo-700 sm:inline">Admin</a>
+                        <a href="admin.php" class="font-semibold text-indigo-700 hover:text-indigo-900">Admin</a>
                     <?php endif; ?>
                     <span class="hidden text-slate-600 md:inline">Hi, <?= e($_SESSION['name'] ?? 'My Account') ?></span>
                     <form action="index.php" method="post" class="inline">
