@@ -10,6 +10,7 @@ if (empty($_SESSION['csrf_token'])) {
 $csrfToken = $_SESSION['csrf_token'];
 $notice = '';
 $noticeType = 'success';
+$showCartLink = false;
 $products = [];
 $categories = [];
 $databaseError = false;
@@ -72,15 +73,19 @@ if (!$databasePassword) {
                     $notice = 'That product could not be found.';
                     $noticeType = 'error';
                 } elseif ($action === 'add_to_cart') {
-                    if ((int) $requestedProduct['stock_quantity'] < 1) {
-                        $notice = 'This product is out of stock.';
+                    if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+                        $_SESSION['cart'] = [];
+                    }
+                    $currentQuantity = max(0, (int) ($_SESSION['cart'][$productId] ?? 0));
+                    if ($currentQuantity >= (int) $requestedProduct['stock_quantity']) {
+                        $notice = (int) $requestedProduct['stock_quantity'] < 1
+                            ? 'This product is out of stock.'
+                            : 'You already have all available stock of this product in your cart.';
                         $noticeType = 'error';
                     } else {
-                        if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
-                            $_SESSION['cart'] = [];
-                        }
-                        $_SESSION['cart'][$productId] = (int) ($_SESSION['cart'][$productId] ?? 0) + 1;
+                        $_SESSION['cart'][$productId] = $currentQuantity + 1;
                         $_SESSION['flash_notice'] = 'Product added to your cart.';
+                        $_SESSION['flash_cart_added'] = true;
                         header('Location: index.php');
                         exit;
                     }
@@ -150,6 +155,8 @@ if (!$databasePassword) {
 if (isset($_SESSION['flash_notice'])) {
     $notice = (string) $_SESSION['flash_notice'];
     unset($_SESSION['flash_notice']);
+    $showCartLink = !empty($_SESSION['flash_cart_added']);
+    unset($_SESSION['flash_cart_added']);
 }
 
 function h(mixed $value): string
@@ -251,8 +258,11 @@ $userName = (string) ($_SESSION['name'] ?? 'My Account');
         </section>
 
         <?php if ($notice !== ''): ?>
-            <div role="status" class="mb-6 rounded-lg border px-4 py-3 <?= $noticeType === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800' ?>">
-                <?= h($notice) ?>
+            <div role="status" class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 <?= $noticeType === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800' ?>">
+                <span><?= h($notice) ?></span>
+                <?php if ($showCartLink): ?>
+                    <a href="cart.php" class="font-semibold underline underline-offset-2 hover:no-underline">View cart &amp; checkout</a>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
@@ -308,9 +318,9 @@ $userName = (string) ($_SESSION['name'] ?? 'My Account');
                             </div>
                             <p class="mt-3 text-xl font-bold text-indigo-700">$<?= h(number_format((float) $product['price'], 2)) ?></p>
                             <div class="mt-5 flex gap-2">
-                                <form action="cart.php" method="post" class="flex-1">
+                                <form action="index.php" method="post" class="flex-1">
                                     <input type="hidden" name="csrf_token" value="<?= h($csrfToken) ?>">
-                                    <input type="hidden" name="action" value="add">
+                                    <input type="hidden" name="action" value="add_to_cart">
                                     <input type="hidden" name="product_id" value="<?= h($product['id']) ?>">
                                     <button type="submit" <?= !$inStock ? 'disabled' : '' ?> class="w-full rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">
                                         Add to Cart
