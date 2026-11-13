@@ -24,8 +24,128 @@ if (($_SESSION['role'] ?? '') !== 'admin' || empty($_SESSION['user_id'])) {
 $notice = '';
 $noticeType = 'success';
 $orders = [];
+$games = [];
+$gameCsvInput = '';
 $databaseError = false;
 $allowedStatuses = ['Pending', 'Shipped', 'Delivered'];
+
+function validateAdminImageUrl(string $value, bool $required = false): ?string
+{
+    $imageUrl = trim($value);
+    if ($imageUrl === '') {
+        if ($required) {
+            throw new InvalidArgumentException('A licensed game cover URL is required.');
+        }
+
+        return null;
+    }
+
+    $parts = parse_url($imageUrl);
+    if (
+        mb_strlen($imageUrl) > 500
+        || !filter_var($imageUrl, FILTER_VALIDATE_URL)
+        || !is_array($parts)
+        || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+        || empty($parts['host'])
+        || isset($parts['user'])
+        || isset($parts['pass'])
+    ) {
+        throw new InvalidArgumentException('Image URL must be a valid HTTPS URL of at most 500 characters.');
+    }
+
+    return $imageUrl;
+}
+
+function parseGameImportCsv(string $csv, array $platformOptions): array
+{
+    if (trim($csv) === '' || strlen($csv) > 200000) {
+        throw new InvalidArgumentException('Paste a CSV with a header and no more than 200 KB of data.');
+    }
+
+    $stream = fopen('php://temp', 'r+');
+    if ($stream === false) {
+        throw new RuntimeException('The CSV import could not be read.');
+    }
+
+    try {
+        if (fwrite($stream, $csv) !== strlen($csv)) {
+            throw new RuntimeException('The CSV import could not be read.');
+        }
+        rewind($stream);
+
+        $header = fgetcsv($stream, null, ',', '"', '');
+        if (!is_array($header)) {
+            throw new InvalidArgumentException('The CSV must start with the expected column header.');
+        }
+        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        $header = array_map(static fn ($value): string => strtolower(trim((string) $value)), $header);
+        if ($header !== ['name', 'platform', 'price', 'stock_quantity', 'image_url', 'description']) {
+            throw new InvalidArgumentException(
+                'Use this exact CSV header: name,platform,price,stock_quantity,image_url,description.'
+            );
+        }
+
+        $rows = [];
+        $rowNumber = 1;
+        while (($fields = fgetcsv($stream, null, ',', '"', '')) !== false) {
+            $rowNumber++;
+            if ($fields === [null] || (count($fields) === 1 && trim((string) $fields[0]) === '')) {
+                continue;
+            }
+            if (count($fields) !== 6) {
+                throw new InvalidArgumentException('CSV row ' . $rowNumber . ' must contain exactly six columns.');
+            }
+
+            $name = trim((string) $fields[0]);
+            $platform = trim((string) $fields[1]);
+            $price = filter_var(trim((string) $fields[2]), FILTER_VALIDATE_FLOAT);
+            $stock = filter_var(trim((string) $fields[3]), FILTER_VALIDATE_INT);
+            $description = trim((string) $fields[5]);
+
+            if ($name === '' || mb_strlen($name) > 150) {
+                throw new InvalidArgumentException('CSV row ' . $rowNumber . ' needs a title of 1–150 characters.');
+            }
+            if (!in_array($platform, $platformOptions, true)) {
+                throw new InvalidArgumentException('CSV row ' . $rowNumber . ' has an unsupported platform.');
+            }
+            if ($price === false || $price < 0 || $price > 99999999.99) {
+                throw new InvalidArgumentException('CSV row ' . $rowNumber . ' needs a valid price.');
+            }
+            if ($stock === false || $stock < 0) {
+                throw new InvalidArgumentException('CSV row ' . $rowNumber . ' needs a stock quantity of zero or greater.');
+            }
+            if (mb_strlen($description) > 500) {
+                throw new InvalidArgumentException('CSV row ' . $rowNumber . ' has a description over 500 characters.');
+            }
+
+            try {
+                $imageUrl = validateAdminImageUrl((string) $fields[4], true);
+            } catch (InvalidArgumentException $exception) {
+                throw new InvalidArgumentException('CSV row ' . $rowNumber . ': ' . $exception->getMessage());
+            }
+
+            $rows[] = [
+                'name' => $name,
+                'category' => $platform,
+                'price' => number_format((float) $price, 2, '.', ''),
+                'stock_quantity' => $stock,
+                'image_url' => $imageUrl,
+                'description' => $description,
+            ];
+            if (count($rows) > 50) {
+                throw new InvalidArgumentException('A single CSV import is limited to 50 games.');
+            }
+        }
+
+        if (!$rows) {
+            throw new InvalidArgumentException('The CSV does not contain any games to import.');
+        }
+
+        return $rows;
+    } finally {
+        fclose($stream);
+    }
+}
 
 try {
     $pdo = cloudcartPdo();
@@ -36,6 +156,7 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $gameCsvInput = (string) ($_POST['game_csv'] ?? '');
     if (!hash_equals($_SESSION['csrf_token'], (string) ($_POST['csrf_token'] ?? ''))) {
         http_response_code(400);
         $notice = 'Your request could not be verified. Please refresh the page and try again.';
@@ -65,13 +186,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
+            if ($action === 'update_product_cover') {
+                $productId = filter_var($_POST['product_id'] ?? null, FILTER_VALIDATE_INT);
+                if (!$productId || $productId < 1) {
+                    throw new InvalidArgumentException('Choose a valid game to update.');
+                }
+
+                $imageUrl = validateAdminImageUrl((string) ($_POST['image_url'] ?? ''), true);
+                $productQuery = $pdo->prepare(
+                    'SELECT id, category FROM dbo.products WHERE id = :id'
+                );
+                $productQuery->execute(['id' => $productId]);
+                $product = $productQuery->fetch();
+                if (!$product || !in_array((string) $product['category'], $platformOptions, true)) {
+                    throw new InvalidArgumentException('That game could not be found in the supported catalog.');
+                }
+
+                $update = $pdo->prepare(
+                    'UPDATE dbo.products SET image_url = :image_url WHERE id = :id'
+                );
+                $update->execute(['image_url' => $imageUrl, 'id' => $productId]);
+                $_SESSION['flash_notice'] = 'Game cover updated. Price, stock, and order history were left unchanged.';
+                header('Location: admin.php#game-covers');
+                exit;
+            }
+
+            if ($action === 'bulk_import_products') {
+                $importRows = parseGameImportCsv(
+                    $gameCsvInput,
+                    $platformOptions
+                );
+                $pdo->beginTransaction();
+                try {
+                    $duplicateQuery = $pdo->prepare(
+                        'SELECT TOP (1) id FROM dbo.products WHERE name = :name AND category = :category'
+                    );
+                    $insert = $pdo->prepare(
+                        'INSERT INTO dbo.products
+                            (name, description, price, stock_quantity, category, image_url, created_at)
+                         VALUES
+                            (:name, :description, :price, :stock_quantity, :category, :image_url, SYSUTCDATETIME())'
+                    );
+                    $seenGames = [];
+                    foreach ($importRows as $row) {
+                        $gameKey = mb_strtolower($row['category'] . '|' . $row['name']);
+                        if (isset($seenGames[$gameKey])) {
+                            throw new InvalidArgumentException(
+                                'The CSV contains the same game more than once for ' . $row['category'] . '.'
+                            );
+                        }
+                        $seenGames[$gameKey] = true;
+
+                        $duplicateQuery->execute([
+                            'name' => $row['name'],
+                            'category' => $row['category'],
+                        ]);
+                        if ($duplicateQuery->fetch()) {
+                            throw new InvalidArgumentException(
+                                $row['name'] . ' already exists for ' . $row['category'] . '.'
+                            );
+                        }
+
+                        $insert->execute($row);
+                    }
+                    $pdo->commit();
+                } catch (Throwable $exception) {
+                    if ($pdo->inTransaction()) {
+                        $pdo->rollBack();
+                    }
+                    throw $exception;
+                }
+
+                $_SESSION['flash_notice'] = count($importRows) . ' games added. Existing catalog items were not changed.';
+                header('Location: admin.php');
+                exit;
+            }
+
             if ($action === 'add_product') {
                 $name = trim((string) ($_POST['name'] ?? ''));
                 $description = trim((string) ($_POST['description'] ?? ''));
                 $price = filter_var($_POST['price'] ?? null, FILTER_VALIDATE_FLOAT);
                 $stock = filter_var($_POST['stock_quantity'] ?? null, FILTER_VALIDATE_INT);
                 $category = trim((string) ($_POST['category'] ?? ''));
-                $imageUrl = trim((string) ($_POST['image_url'] ?? ''));
+                $imageUrl = validateAdminImageUrl((string) ($_POST['image_url'] ?? ''), true);
 
                 if ($name === '' || mb_strlen($name) > 150) {
                     throw new InvalidArgumentException('Game title is required and must be 150 characters or fewer.');
@@ -91,13 +288,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!in_array($category, $platformOptions, true)) {
                     throw new InvalidArgumentException('Choose a platform for this game.');
                 }
-                if ($imageUrl !== '') {
-                    $scheme = strtolower((string) parse_url($imageUrl, PHP_URL_SCHEME));
-                    if (mb_strlen($imageUrl) > 500 || !filter_var($imageUrl, FILTER_VALIDATE_URL) || !in_array($scheme, ['http', 'https'], true)) {
-                        throw new InvalidArgumentException('Image URL must be a valid HTTP or HTTPS URL of at most 500 characters.');
-                    }
-                }
-
                 $insert = $pdo->prepare(
                     'INSERT INTO dbo.products
                         (name, description, price, stock_quantity, category, image_url, created_at)
@@ -110,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'price' => number_format((float) $price, 2, '.', ''),
                     'stock_quantity' => $stock,
                     'category' => $category === '' ? null : $category,
-                    'image_url' => $imageUrl === '' ? null : $imageUrl,
+                    'image_url' => $imageUrl,
                 ]);
                 $_SESSION['flash_notice'] = 'Game added to the library.';
                 header('Location: admin.php');
@@ -140,8 +330,24 @@ if (!$databaseError && $pdo) {
              ORDER BY o.created_at DESC, o.id DESC'
         );
         $orders = $ordersQuery->fetchAll();
+
+        $gamePlatformPlaceholders = [];
+        $gamePlatformParameters = [];
+        foreach ($platformOptions as $index => $platform) {
+            $parameterName = 'game_platform' . $index;
+            $gamePlatformPlaceholders[] = ':' . $parameterName;
+            $gamePlatformParameters[$parameterName] = $platform;
+        }
+        $gamesQuery = $pdo->prepare(
+            'SELECT id, name, category, image_url
+             FROM dbo.products
+             WHERE category IN (' . implode(', ', $gamePlatformPlaceholders) . ')
+             ORDER BY category, name, id'
+        );
+        $gamesQuery->execute($gamePlatformParameters);
+        $games = $gamesQuery->fetchAll();
     } catch (Throwable $exception) {
-        error_log('CloudCart admin orders query error: ' . $exception->getMessage());
+        error_log('CloudCart admin dashboard query error: ' . $exception->getMessage());
         $databaseError = true;
     }
 }
@@ -208,7 +414,7 @@ require_once __DIR__ . '/header.php';
             </div>
             <button id="rawg-search-button" type="button" class="self-end rounded-xl bg-violet-700 px-5 py-3 font-bold text-white transition hover:bg-violet-800">Search games</button>
         </div>
-        <p class="mt-2 text-xs leading-5 text-slate-500">Choose a result to fill its title, platform, and artwork URL. Set your own selling price and stock before adding it.</p>
+        <p class="mt-2 text-xs leading-5 text-slate-500">RAWG helps find the title and platform. Its images are not case covers, so paste a licensed box-cover URL below; enter your own price and stock.</p>
         <div id="rawg-search-status" class="mt-3 text-sm text-slate-600" role="status" aria-live="polite"></div>
         <div id="rawg-search-results" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
     </div>
@@ -242,9 +448,9 @@ require_once __DIR__ . '/header.php';
             <textarea id="description" name="description" maxlength="500" rows="3" placeholder="Genre, edition, or a short store description" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100"></textarea>
         </div>
         <div>
-            <label for="image_url" class="mb-1.5 block text-sm font-semibold text-slate-700">Game artwork URL</label>
-            <input id="image_url" name="image_url" type="url" maxlength="500" placeholder="Choose a RAWG result or paste a licensed HTTPS image URL" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
-            <p class="mt-1 text-xs text-slate-400">Use artwork you have permission to display.</p>
+            <label for="image_url" class="mb-1.5 block text-sm font-semibold text-slate-700">Licensed case-cover URL</label>
+            <input id="image_url" name="image_url" type="url" maxlength="500" required placeholder="Paste an HTTPS URL for the actual game case cover" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
+            <p class="mt-1 text-xs text-slate-400">Use a cover image you have permission to display.</p>
         </div>
         <div class="sm:col-span-2">
             <button type="submit" <?= $databaseError ? 'disabled' : '' ?> class="rounded-xl bg-violet-700 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-slate-300">Add game to library</button>
@@ -304,15 +510,6 @@ require_once __DIR__ . '/header.php';
             const card = document.createElement('article');
             card.className = 'flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm';
 
-            if (game.image_url) {
-                const image = document.createElement('img');
-                image.src = game.image_url;
-                image.alt = '';
-                image.loading = 'lazy';
-                image.className = 'h-24 w-16 shrink-0 rounded-lg bg-slate-100 object-cover';
-                card.append(image);
-            }
-
             const details = document.createElement('div');
             details.className = 'min-w-0 flex-1';
             const title = document.createElement('h3');
@@ -328,7 +525,7 @@ require_once __DIR__ . '/header.php';
             const selectButton = document.createElement('button');
             selectButton.type = 'button';
             selectButton.className = 'mt-2 rounded-lg bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-800 transition hover:bg-violet-200';
-            selectButton.textContent = 'Use this game';
+            selectButton.textContent = 'Use title and platform';
             selectButton.addEventListener('click', () => {
                 titleInput.value = game.name;
                 const normalizedPlatforms = (game.platforms || []).map((platform) =>
@@ -337,10 +534,9 @@ require_once __DIR__ . '/header.php';
                 platformInput.value = normalizedPlatforms
                     .map((platform) => platformAliases[platform])
                     .find((platform) => supportedPlatforms.includes(platform)) || '';
-                imageInput.value = game.image_url || '';
                 status.textContent = platformInput.value
-                    ? `${game.name} selected. Add a price and stock quantity to list it.`
-                    : `${game.name} selected. Choose a supported platform, then add a price and stock quantity.`;
+                    ? `${game.name} selected. Add its licensed case-cover URL, price, and stock quantity.`
+                    : `${game.name} selected. Choose a supported platform, then add its licensed case-cover URL, price, and stock quantity.`;
                 titleInput.focus();
             });
             details.append(title, metadata, selectButton);
@@ -387,6 +583,69 @@ require_once __DIR__ . '/header.php';
     searchGames();
 })();
 </script>
+
+<section class="mb-10 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-100 bg-gradient-to-r from-white to-violet-50/60 px-6 py-5">
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-violet-700">Catalog setup</p>
+        <h2 class="mt-1 text-xl font-bold text-slate-950">Bulk add games</h2>
+        <p class="mt-2 text-sm text-slate-500">Fill in the 18-game template with your prices, starting stock, and licensed case-cover URLs. This adds new rows only; it does not delete or alter existing products.</p>
+        <a href="game-import-template.csv" download class="mt-3 inline-flex rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm font-bold text-violet-800 transition hover:bg-violet-50">Download 18-game CSV template</a>
+    </div>
+    <form action="admin.php#bulk-import" method="post" id="bulk-import" class="p-6">
+        <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
+        <input type="hidden" name="action" value="bulk_import_products">
+        <label for="game_csv" class="mb-2 block text-sm font-semibold text-slate-700">CSV data</label>
+        <textarea id="game_csv" name="game_csv" rows="10" required placeholder="name,platform,price,stock_quantity,image_url,description&#10;Game title,PlayStation 5,59.99,10,https://example.com/licensed-cover.jpg,Optional description" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 font-mono text-xs outline-none transition focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-100"><?= e($gameCsvInput) ?></textarea>
+        <p class="mt-2 text-xs leading-5 text-slate-500">CSV must use the exact header shown. Cover URLs are required; quote any CSV values containing commas. Imports are all-or-nothing and limited to 50 games per submission.</p>
+        <button type="submit" <?= $databaseError ? 'disabled' : '' ?> class="mt-4 rounded-xl bg-violet-700 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-slate-300">Import games</button>
+    </form>
+</section>
+
+<section id="game-covers" class="mb-10 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-100 bg-gradient-to-r from-white to-cyan-50/60 px-6 py-5">
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-cyan-700">Keep your catalog artwork current</p>
+        <h2 class="mt-1 text-xl font-bold text-slate-950">Update existing game covers</h2>
+        <p class="mt-2 text-sm text-slate-500">Only the selected game’s image URL changes. Its price, stock, and order history stay as they are.</p>
+    </div>
+    <?php if ($databaseError): ?>
+        <p class="p-6 text-sm text-amber-800">Existing games could not be loaded right now.</p>
+    <?php elseif (!$games): ?>
+        <p class="p-6 text-sm text-slate-500">No games in the supported platforms have been added yet.</p>
+    <?php else: ?>
+        <div class="divide-y divide-slate-100">
+            <?php foreach ($games as $game): ?>
+                <?php
+                $currentImageUrl = trim((string) ($game['image_url'] ?? ''));
+                $currentImageParts = parse_url($currentImageUrl);
+                $hasCurrentImage = filter_var($currentImageUrl, FILTER_VALIDATE_URL)
+                    && is_array($currentImageParts)
+                    && strtolower((string) ($currentImageParts['scheme'] ?? '')) === 'https';
+                ?>
+                <form action="admin.php#game-covers" method="post" class="grid gap-3 p-5 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,2fr)_auto] sm:items-end">
+                    <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
+                    <input type="hidden" name="action" value="update_product_cover">
+                    <input type="hidden" name="product_id" value="<?= e($game['id']) ?>">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <?php if ($hasCurrentImage): ?>
+                            <img src="<?= e($currentImageUrl) ?>" alt="Current artwork for <?= e($game['name']) ?>" loading="lazy" class="h-16 w-12 shrink-0 rounded-md bg-slate-100 object-cover">
+                        <?php else: ?>
+                            <span class="flex h-16 w-12 shrink-0 items-center justify-center rounded-md bg-violet-100 text-[9px] font-bold text-violet-700">NO ART</span>
+                        <?php endif; ?>
+                        <div class="min-w-0">
+                            <p class="truncate font-bold text-slate-900"><?= e($game['name']) ?></p>
+                            <p class="mt-1 text-xs font-semibold text-violet-700"><?= e($game['category']) ?> · ID <?= e($game['id']) ?></p>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="cover-url-<?= e($game['id']) ?>" class="mb-1.5 block text-xs font-semibold text-slate-600">Licensed case-cover URL</label>
+                        <input id="cover-url-<?= e($game['id']) ?>" name="image_url" type="url" maxlength="500" required value="<?= e($currentImageUrl) ?>" placeholder="https://..." class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-100">
+                    </div>
+                    <button type="submit" <?= $databaseError ? 'disabled' : '' ?> class="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-slate-300">Save cover</button>
+                </form>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+</section>
 
 <section>
     <div class="mb-4 flex flex-wrap items-end justify-between gap-4">

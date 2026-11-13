@@ -179,7 +179,7 @@ require_once __DIR__ . '/header.php';
             $inStock = $isGame && (int) $product['stock_quantity'] > 0;
             ?>
             <article class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-violet-300 hover:shadow-xl">
-                <div class="relative aspect-[3/4] overflow-hidden bg-slate-950">
+                <div class="relative aspect-[7/10] overflow-hidden bg-slate-950">
                     <?php if ($hasImage): ?>
                         <img src="<?= e($imageUrl) ?>" alt="Game artwork for <?= e($product['name']) ?>" loading="lazy" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
                     <?php else: ?>

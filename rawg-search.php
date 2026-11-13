@@ -96,16 +96,10 @@ foreach ($payload['results'] as $game) {
         }
     }
 
-    $imageUrl = $game['background_image'] ?? null;
-    if (!is_string($imageUrl) || strtolower((string) parse_url($imageUrl, PHP_URL_SCHEME)) !== 'https') {
-        $imageUrl = null;
-    }
-
     $games[] = [
         'name' => mb_substr($game['name'], 0, 150),
         'released' => isset($game['released']) && is_string($game['released']) ? $game['released'] : '',
         'rating' => isset($game['rating']) && is_numeric($game['rating']) ? (float) $game['rating'] : null,
-        'image_url' => $imageUrl,
         'platforms' => array_values(array_unique($platforms)),
     ];
 }

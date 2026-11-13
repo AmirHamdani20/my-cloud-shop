@@ -2,10 +2,10 @@
 
 GameGrid is a PHP game storefront for PlayStation, Xbox, Nintendo, PC, and other platforms. Product prices, stock, carts, wishlists, and orders remain in the existing SQL Server catalog.
 
-## RAWG game lookup
+## Game artwork and catalog import
 
-The admin dashboard can search RAWG for game titles, platform metadata, and artwork URLs. Configure the API key as a server environment variable named `RAWG_API_KEY`; never put it in PHP, JavaScript, or a committed `.env` file.
+The admin dashboard can search RAWG for game titles and platform metadata. RAWG's `background_image` is not a box-cover image, so it is not automatically used for product artwork. Add a licensed case-cover URL when creating a game, or update an existing game's `image_url` from the admin cover list.
 
-RAWG search only provides game metadata and artwork. An admin must choose a title, set its platform, enter the store's price and stock, and add it to the catalog before customers can buy it. Use artwork in accordance with RAWG's terms and your rights to display it.
+The downloadable `game-import-template.csv` contains six suggested games each for Xbox Series X|S, PlayStation 5, and Nintendo Switch. Fill in the store price, starting stock, and licensed cover URL for every row, then paste the CSV into the admin bulk-import form. Imports are atomic, limited to 50 games, and do not modify existing products. Do not delete existing catalog rows to replace their covers; update only their artwork URL.
 
-The RAWG lookup requires PHP cURL. If `RAWG_API_KEY` is not configured, the rest of the storefront remains available and the admin search reports that game search is unavailable.
+Configure the RAWG API key as a server environment variable named `RAWG_API_KEY`; never put it in PHP, JavaScript, or a committed `.env` file. RAWG lookup requires PHP cURL. If the key is not configured, the rest of the storefront and manual cover-management tools remain available.
