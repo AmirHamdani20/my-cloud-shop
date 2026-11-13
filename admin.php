@@ -139,61 +139,103 @@ if (!$databaseError && $pdo) {
 }
 
 $pageTitle = 'Admin Dashboard';
+$pendingOrderCount = count(array_filter(
+    $orders,
+    static fn (array $order): bool => in_array(
+        strtolower((string) $order['order_status']),
+        ['pending', 'processing'],
+        true
+    )
+));
+$orderValue = array_sum(array_map(
+    static fn (array $order): float => (float) $order['total_amount'],
+    $orders
+));
 require_once __DIR__ . '/header.php';
 ?>
-<div class="mb-7">
-    <p class="text-sm font-semibold uppercase tracking-widest text-indigo-600">CloudCart management</p>
-    <h1 class="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">Admin dashboard</h1>
+<div class="relative mb-8 overflow-hidden rounded-3xl bg-slate-950 px-6 py-8 text-white shadow-lg sm:px-9 sm:py-10">
+    <div class="absolute -right-10 -top-20 h-56 w-56 rounded-full bg-indigo-500/30 blur-3xl"></div>
+    <div class="relative">
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">CloudCart management</p>
+        <h1 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Admin dashboard</h1>
+        <p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">A quick view of your orders and a simple way to add to the catalog.</p>
+    </div>
 </div>
 
 <?php if ($databaseError): ?>
-    <div class="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900">The dashboard data could not be loaded. Please try again later.</div>
+    <div class="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">The dashboard data could not be loaded. Please try again later.</div>
 <?php endif; ?>
 
-<section class="mb-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-bold text-slate-900">Add a product</h2>
+<?php if (!$databaseError): ?>
+    <section aria-label="Order overview" class="mb-8 grid gap-4 sm:grid-cols-3">
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p class="text-sm font-medium text-slate-500">All orders</p>
+            <p class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950"><?= e(count($orders)) ?></p>
+            <p class="mt-1 text-xs text-slate-400">Orders placed in the store</p>
+        </article>
+        <article class="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 shadow-sm">
+            <p class="text-sm font-medium text-indigo-700">In progress</p>
+            <p class="mt-2 text-3xl font-extrabold tracking-tight text-indigo-950"><?= e($pendingOrderCount) ?></p>
+            <p class="mt-1 text-xs text-indigo-600/70">Pending or processing</p>
+        </article>
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p class="text-sm font-medium text-slate-500">Total order value</p>
+            <p class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">$<?= e(number_format($orderValue, 2)) ?></p>
+            <p class="mt-1 text-xs text-slate-400">Across all orders</p>
+        </article>
+    </section>
+<?php endif; ?>
+
+<section class="mb-10 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/60 px-6 py-5">
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Catalog management</p>
+        <h2 class="mt-1 text-xl font-bold text-slate-950">Add a product</h2>
+    </div>
+    <div class="p-6">
     <form action="admin.php" method="post" class="mt-5 grid gap-4 sm:grid-cols-2">
         <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
         <input type="hidden" name="action" value="add_product">
         <div>
             <label for="name" class="mb-1.5 block text-sm font-semibold text-slate-700">Product name</label>
-            <input id="name" name="name" maxlength="150" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5">
+            <input id="name" name="name" maxlength="150" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
         <div>
             <label for="price" class="mb-1.5 block text-sm font-semibold text-slate-700">Price</label>
-            <input id="price" name="price" type="number" min="0" max="99999999.99" step="0.01" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5">
+            <input id="price" name="price" type="number" min="0" max="99999999.99" step="0.01" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
         <div>
             <label for="stock_quantity" class="mb-1.5 block text-sm font-semibold text-slate-700">Stock quantity</label>
-            <input id="stock_quantity" name="stock_quantity" type="number" min="0" step="1" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5">
+            <input id="stock_quantity" name="stock_quantity" type="number" min="0" step="1" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
         <div>
             <label for="category" class="mb-1.5 block text-sm font-semibold text-slate-700">Category</label>
-            <input id="category" name="category" maxlength="50" class="w-full rounded-lg border border-slate-300 px-3 py-2.5">
+            <input id="category" name="category" maxlength="50" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
         <div class="sm:col-span-2">
             <label for="image_url" class="mb-1.5 block text-sm font-semibold text-slate-700">Image URL</label>
-            <input id="image_url" name="image_url" type="url" maxlength="500" placeholder="https://..." class="w-full rounded-lg border border-slate-300 px-3 py-2.5">
+            <input id="image_url" name="image_url" type="url" maxlength="500" placeholder="https://..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
         <div class="sm:col-span-2">
-            <button type="submit" <?= $databaseError ? 'disabled' : '' ?> class="rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">Add product</button>
+            <button type="submit" <?= $databaseError ? 'disabled' : '' ?> class="rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">Add product</button>
         </div>
     </form>
+    </div>
 </section>
 
 <section>
-    <div class="mb-4 flex items-end justify-between gap-4">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-            <h2 class="text-xl font-bold text-slate-900">All orders</h2>
-            <?php if (!$databaseError): ?><p class="mt-1 text-sm text-slate-500"><?= e(count($orders)) ?> orders</p><?php endif; ?>
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Store activity</p>
+            <h2 class="mt-1 text-2xl font-bold text-slate-950">All orders</h2>
+            <?php if (!$databaseError): ?><p class="mt-1 text-sm text-slate-500"><?= e(count($orders)) ?> orders to manage</p><?php endif; ?>
         </div>
     </div>
     <?php if (!$databaseError && !$orders): ?>
         <div class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">There are no orders yet.</div>
     <?php elseif (!$databaseError): ?>
-        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
             <table class="w-full min-w-[800px] text-left text-sm">
-                <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <thead class="bg-slate-950 text-xs uppercase tracking-wide text-slate-300">
                     <tr>
                         <th class="px-5 py-4">Order</th>
                         <th class="px-5 py-4">Customer</th>
@@ -206,7 +248,7 @@ require_once __DIR__ . '/header.php';
                 <tbody class="divide-y divide-slate-100">
                     <?php foreach ($orders as $order): ?>
                         <tr>
-                            <td class="px-5 py-4 font-semibold text-slate-900">#<?= e($order['id']) ?></td>
+                            <td class="px-5 py-4 font-semibold text-slate-950">#<?= e($order['id']) ?></td>
                             <td class="px-5 py-4"><?= e($order['customer_name'] ?? ('User #' . $order['user_id'])) ?></td>
                             <td class="px-5 py-4"><?= e($order['created_at']) ?></td>
                             <td class="px-5 py-4 font-semibold">$<?= e(number_format((float) $order['total_amount'], 2)) ?></td>

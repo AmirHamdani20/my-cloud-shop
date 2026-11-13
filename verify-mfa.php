@@ -134,21 +134,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = 'Verify Sign In';
 require_once __DIR__ . '/header.php';
 ?>
-<section class="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
-    <div class="mb-7 text-center">
-        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Two-step verification</h1>
+<section class="mx-auto grid max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl md:grid-cols-[0.85fr_1.15fr]">
+    <aside class="relative hidden overflow-hidden bg-slate-950 p-9 text-white md:flex md:flex-col md:justify-between lg:p-11">
+        <div class="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-indigo-600/40 blur-3xl"></div>
+        <div class="relative">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Account security</p>
+            <h2 class="mt-5 text-3xl font-black leading-tight">One quick check to keep your account protected.</h2>
+        </div>
+        <p class="relative mt-10 text-sm leading-6 text-slate-300">Your verification code comes from the authenticator app connected to your account.</p>
+    </aside>
+    <div class="p-7 sm:p-10 lg:p-12">
+    <div class="mb-7">
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Secure sign in</p>
+        <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Two-step verification</h1>
         <p class="mt-2 text-sm text-slate-500">Enter the 6-digit code from your authenticator app.</p>
     </div>
     <?php if ($notice !== ''): ?>
-        <div role="alert" class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><?= e($notice) ?></div>
+        <div role="alert" class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><?= e($notice) ?></div>
     <?php endif; ?>
     <form action="verify-mfa.php" method="post" class="space-y-5">
         <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
         <div>
             <label for="code" class="mb-2 block text-sm font-semibold text-slate-700">Authenticator code</label>
-            <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus class="w-full rounded-lg border border-slate-300 px-3 py-3 text-center text-xl tracking-[0.4em] outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+            <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-4 text-center text-2xl font-bold tracking-[0.5em] outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
-        <button type="submit" class="w-full rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700">Verify and sign in</button>
+        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-5 py-3.5 font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200">Verify and sign in</button>
     </form>
+    </div>
 </section>
 <?php require_once __DIR__ . '/footer.php'; ?>

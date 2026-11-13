@@ -59,19 +59,33 @@ $pageTitle = 'My Orders';
 require_once __DIR__ . '/header.php';
 ?>
 <div class="mb-7">
-    <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">My orders</h1>
-    <p class="mt-2 text-slate-500">Track your orders and review the items you purchased.</p>
+    <div class="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-8 text-white shadow-lg sm:px-9 sm:py-10">
+        <div class="absolute -right-10 -top-20 h-56 w-56 rounded-full bg-indigo-500/30 blur-3xl"></div>
+        <div class="relative flex flex-wrap items-end justify-between gap-5">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">The details, all in one place</p>
+                <h1 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Your orders</h1>
+                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">Follow your order progress and revisit the things you’ve picked up.</p>
+            </div>
+            <?php if (!$databaseError): ?>
+                <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100"><?= e(count($orders)) ?> <?= count($orders) === 1 ? 'order' : 'orders' ?></span>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>
 
 <?php if ($databaseError): ?>
-    <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+    <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
         Your order history could not be loaded right now. Please try again later.
     </div>
 <?php elseif (!$orders): ?>
-    <section class="rounded-xl border border-slate-200 bg-white p-10 text-center">
-        <h2 class="text-xl font-semibold text-slate-900">No orders yet</h2>
-        <p class="mt-2 text-slate-500">Your completed purchases will appear here.</p>
-        <a href="index.php" class="mt-5 inline-flex rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700">Start shopping</a>
+    <section class="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+        <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600" aria-hidden="true">
+            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg>
+        </span>
+        <h2 class="mt-4 text-xl font-bold text-slate-950">Your order story starts here</h2>
+        <p class="mt-2 text-slate-500">Your purchases will show up here once you place an order.</p>
+        <a href="index.php" class="mt-5 inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white transition hover:bg-indigo-700">Explore the shop</a>
     </section>
 <?php else: ?>
     <div class="space-y-5">
@@ -91,14 +105,15 @@ require_once __DIR__ . '/header.php';
                 $orderDate = (string) $order['created_at'];
             }
             ?>
-            <article class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 p-5 sm:p-6">
+            <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50 p-5 sm:p-6">
                     <div>
-                        <h2 class="text-lg font-bold text-slate-900">Order #<?= e($order['id']) ?></h2>
+                        <p class="text-xs font-bold uppercase tracking-[0.15em] text-indigo-600">CloudCart order</p>
+                        <h2 class="mt-1 text-lg font-bold text-slate-950">#<?= e($order['id']) ?></h2>
                         <p class="mt-1 text-sm text-slate-500"><?= e($orderDate) ?></p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
-                        <span class="rounded-full px-3 py-1 text-xs font-semibold <?= e($paymentClass) ?>">
+                        <span class="rounded-full px-3 py-1.5 text-xs font-bold <?= e($paymentClass) ?>">
                             <?= e($paymentStatus) ?>
                         </span>
                         <span class="text-lg font-bold text-slate-900">$<?= e(number_format((float) $order['total_amount'], 2)) ?></span>
@@ -106,7 +121,7 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="px-5 py-6 sm:px-6">
-                    <h3 class="mb-4 text-sm font-semibold text-slate-700">Order status</h3>
+                    <h3 class="mb-4 text-xs font-bold uppercase tracking-[0.15em] text-slate-500">Order progress</h3>
                     <ol class="grid grid-cols-4 gap-2" aria-label="Order status: <?= e($order['order_status']) ?>">
                         <?php foreach ($statusSteps as $stepIndex => $step): ?>
                             <?php
@@ -132,7 +147,7 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <details class="border-t border-slate-100">
-                    <summary class="cursor-pointer px-5 py-4 text-sm font-semibold text-indigo-700 hover:bg-slate-50 sm:px-6">
+                    <summary class="cursor-pointer px-5 py-4 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50/50 sm:px-6">
                         Purchased items (<?= e(count($order['items'])) ?>)
                     </summary>
                     <?php if ($order['items']): ?>

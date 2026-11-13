@@ -32,24 +32,43 @@ if ($orderId && $orderId > 0) {
 $pageTitle = 'Order Confirmation';
 require_once __DIR__ . '/header.php';
 ?>
-<section class="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-10">
+<section class="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
     <?php if ($databaseError): ?>
-        <h1 class="text-2xl font-bold text-slate-900">Order confirmation unavailable</h1>
-        <p class="mt-3 text-slate-600">Your order may have been placed. Check your order history or try again later.</p>
+        <div class="p-8 text-center sm:p-12">
+            <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-2xl font-bold text-amber-700" aria-hidden="true">!</span>
+            <h1 class="mt-5 text-2xl font-bold text-slate-950">Order confirmation unavailable</h1>
+            <p class="mt-3 text-slate-600">Your order may have been placed. Check your order history or try again later.</p>
+        </div>
     <?php elseif (!$order): ?>
-        <h1 class="text-2xl font-bold text-slate-900">Order not found</h1>
-        <p class="mt-3 text-slate-600">We couldn’t find an order associated with your account.</p>
+        <div class="p-8 text-center sm:p-12">
+            <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-2xl font-bold text-slate-500" aria-hidden="true">?</span>
+            <h1 class="mt-5 text-2xl font-bold text-slate-950">Order not found</h1>
+            <p class="mt-3 text-slate-600">We couldn’t find an order associated with your account.</p>
+        </div>
     <?php else: ?>
-        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-700" aria-hidden="true">✓</div>
-        <h1 class="mt-5 text-3xl font-extrabold tracking-tight text-slate-900">Thank you for your order!</h1>
-        <p class="mt-3 text-slate-600">Your simulated payment is complete and your order is being processed.</p>
-        <dl class="mx-auto mt-7 max-w-sm space-y-3 rounded-lg bg-slate-50 p-5 text-left text-sm">
-            <div class="flex justify-between gap-4"><dt class="text-slate-500">Order number</dt><dd class="font-semibold text-slate-900">#<?= e($order['id']) ?></dd></div>
-            <div class="flex justify-between gap-4"><dt class="text-slate-500">Status</dt><dd class="font-semibold text-slate-900"><?= e($order['order_status']) ?></dd></div>
-            <div class="flex justify-between gap-4"><dt class="text-slate-500">Payment</dt><dd class="font-semibold text-slate-900"><?= e($order['payment_status']) ?></dd></div>
-            <div class="flex justify-between gap-4"><dt class="text-slate-500">Total</dt><dd class="font-semibold text-slate-900">$<?= e(number_format((float) $order['total_amount'], 2)) ?></dd></div>
-        </dl>
+        <div class="bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 px-6 py-10 text-center text-white sm:px-12 sm:py-14">
+            <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-400 text-3xl font-bold text-slate-950 shadow-lg shadow-emerald-500/20" aria-hidden="true">✓</span>
+            <p class="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Order received</p>
+            <h1 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Thanks for shopping with us.</h1>
+            <p class="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-300">Your simulated payment is complete and your order is being processed.</p>
+        </div>
+        <div class="p-6 sm:p-9">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.15em] text-slate-400">Order number</p>
+                    <p class="mt-1 text-xl font-extrabold text-slate-950">#<?= e($order['id']) ?></p>
+                </div>
+                <a href="orders.php" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700">Track your order</a>
+            </div>
+            <dl class="mt-6 grid gap-3 rounded-2xl bg-slate-50 p-5 text-sm sm:grid-cols-3">
+                <div><dt class="text-slate-500">Status</dt><dd class="mt-1 font-semibold text-slate-950"><?= e($order['order_status']) ?></dd></div>
+                <div><dt class="text-slate-500">Payment</dt><dd class="mt-1 font-semibold text-slate-950"><?= e($order['payment_status']) ?></dd></div>
+                <div><dt class="text-slate-500">Total</dt><dd class="mt-1 font-bold text-slate-950">$<?= e(number_format((float) $order['total_amount'], 2)) ?></dd></div>
+            </dl>
+        </div>
     <?php endif; ?>
-    <a href="index.php" class="mt-7 inline-flex rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700">Continue shopping</a>
+    <div class="border-t border-slate-100 px-6 py-5 text-center sm:px-9">
+        <a href="index.php" class="inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-indigo-700">Continue shopping</a>
+    </div>
 </section>
 <?php require_once __DIR__ . '/footer.php'; ?>

@@ -73,14 +73,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle = 'Sign In';
 require_once __DIR__ . '/header.php';
 ?>
-<section class="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
-    <div class="mb-7 text-center">
-        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Welcome back</h1>
+<section class="mx-auto grid max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl md:grid-cols-[0.85fr_1.15fr]">
+    <aside class="relative hidden overflow-hidden bg-slate-950 p-9 text-white md:flex md:flex-col md:justify-between lg:p-11">
+        <div class="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-indigo-600/40 blur-3xl"></div>
+        <div class="relative">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Your CloudCart account</p>
+            <h2 class="mt-5 text-3xl font-black leading-tight">Your next great find is just a sign in away.</h2>
+        </div>
+        <div class="relative mt-10 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
+            <p class="text-sm leading-6 text-slate-300">Keep your saved products close and pick up where you left off.</p>
+            <a href="index.php" class="mt-4 inline-flex text-sm font-bold text-cyan-300 hover:text-cyan-200">Explore the shop <span class="ml-1" aria-hidden="true">→</span></a>
+        </div>
+    </aside>
+    <div class="p-7 sm:p-10 lg:p-12">
+    <div class="mb-7">
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Good to see you</p>
+        <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Welcome back</h1>
         <p class="mt-2 text-sm text-slate-500">Sign in to manage your CloudCart account.</p>
     </div>
 
     <?php if ($notice !== ''): ?>
-        <div role="<?= $noticeType === 'error' ? 'alert' : 'status' ?>" class="mb-5 rounded-lg border px-4 py-3 text-sm <?= $noticeType === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800' ?>">
+        <div role="<?= $noticeType === 'error' ? 'alert' : 'status' ?>" class="mb-5 rounded-xl border px-4 py-3 text-sm <?= $noticeType === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800' ?>">
             <?= e($notice) ?>
         </div>
     <?php endif; ?>
@@ -90,13 +103,13 @@ require_once __DIR__ . '/header.php';
         <input type="hidden" name="redirect" value="<?= e($redirectTo) ?>">
         <div>
             <label for="email" class="mb-2 block text-sm font-semibold text-slate-700">Email address</label>
-            <input id="email" name="email" type="email" autocomplete="email" required maxlength="255" value="<?= e($email) ?>" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+            <input id="email" name="email" type="email" autocomplete="email" required maxlength="255" value="<?= e($email) ?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
         <div>
             <label for="password" class="mb-2 block text-sm font-semibold text-slate-700">Password</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100">
+            <input id="password" name="password" type="password" autocomplete="current-password" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
-        <button type="submit" class="w-full rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700">
+        <button type="submit" class="w-full rounded-xl bg-indigo-600 px-5 py-3.5 font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200">
             Sign In
         </button>
     </form>
@@ -105,5 +118,6 @@ require_once __DIR__ . '/header.php';
         Don’t have an account?
         <a href="register.php" class="font-semibold text-indigo-700 hover:text-indigo-900">Register</a>
     </p>
+    </div>
 </section>
 <?php require_once __DIR__ . '/footer.php'; ?>

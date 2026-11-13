@@ -199,26 +199,38 @@ $pageTitle = 'Checkout';
 require_once __DIR__ . '/header.php';
 ?>
 <div class="mb-7">
-    <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Checkout</h1>
-    <p class="mt-2 text-slate-500">Shipping and payment are simulated for this demonstration.</p>
+    <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Almost yours</p>
+    <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">Checkout</h1>
+    <p class="mt-2 text-slate-500">Add your details and review your order before placing it.</p>
+    <ol class="mt-6 flex max-w-xl items-center gap-3 text-xs font-semibold sm:text-sm" aria-label="Checkout progress">
+        <li class="flex items-center gap-2 text-emerald-700"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100">✓</span> Cart</li>
+        <li class="h-px flex-1 bg-indigo-200" aria-hidden="true"></li>
+        <li class="flex items-center gap-2 text-indigo-700"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-white">2</span> Details</li>
+        <li class="h-px flex-1 bg-slate-200" aria-hidden="true"></li>
+        <li class="flex items-center gap-2 text-slate-400"><span class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white">3</span> Complete</li>
+    </ol>
 </div>
 
 <?php if ($databaseError): ?>
     <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-900">Checkout is temporarily unavailable. Please try again later.</div>
 <?php else: ?>
-    <div class="grid gap-8 lg:grid-cols-[1fr_0.8fr]">
-        <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 class="text-xl font-bold text-slate-900">Delivery and payment</h2>
+    <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/60 px-6 py-5">
+                <p class="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Step 2 of 3</p>
+                <h2 class="mt-1 text-xl font-bold text-slate-950">Delivery and payment</h2>
+            </div>
+            <div class="p-6">
             <form action="checkout.php" method="post" class="mt-6 space-y-5">
                 <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
                 <div>
                     <label for="shipping_address" class="mb-2 block text-sm font-semibold text-slate-700">Shipping address</label>
-                    <textarea id="shipping_address" name="shipping_address" rows="4" maxlength="2000" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"><?= e($shippingAddress) ?></textarea>
+                    <textarea id="shipping_address" name="shipping_address" rows="4" maxlength="2000" required placeholder="Street, city, region and postal code" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100"><?= e($shippingAddress) ?></textarea>
                 </div>
                 <fieldset>
                     <legend class="mb-3 text-sm font-semibold text-slate-700">Simulated payment method</legend>
                     <div class="space-y-3">
-                        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-4 hover:border-indigo-300">
+                        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-indigo-300 hover:bg-indigo-50/40">
                             <input type="radio" name="payment_method" value="Virtual Credit Card" <?= $paymentMethod === 'Virtual Credit Card' ? 'checked' : '' ?> class="mt-1 accent-indigo-600">
                             <span>
                                 <span class="block font-semibold text-slate-900">Virtual Credit Card</span>
@@ -239,21 +251,25 @@ require_once __DIR__ . '/header.php';
                                 <input id="demo_cvv" value="123" readonly class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
                             </div>
                         </div>
-                        <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 p-4 hover:border-indigo-300">
+                        <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-indigo-300 hover:bg-indigo-50/40">
                             <input type="radio" name="payment_method" value="Virtual Wallet" <?= $paymentMethod === 'Virtual Wallet' ? 'checked' : '' ?> class="accent-indigo-600">
                             <span class="font-semibold text-slate-900">Virtual Wallet</span>
                         </label>
                     </div>
                 </fieldset>
-                <button type="submit" <?= !$summary || $checkoutBlocked || $databaseError ? 'disabled' : '' ?> class="w-full rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+                <button type="submit" <?= !$summary || $checkoutBlocked || $databaseError ? 'disabled' : '' ?> class="w-full rounded-xl bg-indigo-600 px-5 py-3.5 font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-300">
                     Place simulated order
                 </button>
             </form>
+            <p class="mt-4 text-center text-xs leading-5 text-slate-400">This is a demo checkout. Do not enter real payment details.</p>
+            </div>
         </section>
 
-        <aside class="h-fit rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 class="text-xl font-bold text-slate-900">Order summary</h2>
-            <ul class="mt-5 divide-y divide-slate-100">
+        <aside class="h-fit overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:sticky lg:top-6">
+            <div class="border-b border-slate-100 p-6">
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Your selection</p>
+            <h2 class="mt-1 text-xl font-bold text-slate-950">Order summary</h2>
+            <ul class="mt-4 divide-y divide-slate-100">
                 <?php foreach ($summary as $item): ?>
                     <li class="flex justify-between gap-4 py-3 text-sm">
                         <span class="text-slate-600"><?= e($item['name']) ?> <span class="text-slate-400">× <?= e($item['quantity']) ?></span></span>
@@ -262,10 +278,15 @@ require_once __DIR__ . '/header.php';
                 <?php endforeach; ?>
             </ul>
             <div class="mt-4 flex justify-between border-t border-slate-200 pt-4 text-lg font-bold">
-                <span>Total</span>
+                <span class="text-slate-900">Total</span>
                 <span>$<?= e(number_format($totalCents / 100, 2)) ?></span>
             </div>
-            <a href="cart.php" class="mt-5 inline-block text-sm font-semibold text-indigo-700 hover:text-indigo-900">Return to cart</a>
+            <a href="cart.php" class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 transition hover:text-indigo-900"><span aria-hidden="true">←</span> Return to cart</a>
+            </div>
+            <div class="flex items-center gap-2 bg-slate-50 px-6 py-3 text-xs text-slate-500">
+                <span class="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700" aria-hidden="true">✓</span>
+                Demo payment only. No real charge will be made.
+            </div>
         </aside>
     </div>
 <?php endif; ?>
