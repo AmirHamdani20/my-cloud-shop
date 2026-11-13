@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+$platformOptions = require __DIR__ . '/game-platforms.php';
 
 if (empty($_SESSION['user_id'])) {
     header('Location: login.php?redirect=checkout.php');
@@ -57,16 +58,20 @@ if (!$databaseError && $_SERVER['REQUEST_METHOD'] === 'POST') {
             ksort($cart, SORT_NUMERIC);
             foreach ($cart as $productId => $quantity) {
                 $productQuery = $pdo->prepare(
-                    'SELECT id, name, price, stock_quantity
+                    'SELECT id, name, price, stock_quantity, category
                      FROM dbo.products WITH (UPDLOCK, ROWLOCK)
                      WHERE id = :id'
                 );
                 $productQuery->execute(['id' => (int) $productId]);
                 $product = $productQuery->fetch();
 
-                if (!$product || (int) $product['stock_quantity'] < (int) $quantity) {
+                if (
+                    !$product
+                    || !in_array((string) $product['category'], $platformOptions, true)
+                    || (int) $product['stock_quantity'] < (int) $quantity
+                ) {
                     throw new DomainException(
-                        'One or more products no longer have enough stock. Review your cart and try again.'
+                        'One or more games are no longer available or do not have enough stock. Review your cart and try again.'
                     );
                 }
 
@@ -163,7 +168,7 @@ try {
         $parameters[$parameterName] = $id;
     }
     $summaryQuery = $pdo->prepare(
-        'SELECT id, name, price, stock_quantity
+        'SELECT id, name, price, stock_quantity, category
          FROM dbo.products WHERE id IN (' . implode(', ', $placeholders) . ')'
     );
     $summaryQuery->execute($parameters);
@@ -173,8 +178,11 @@ try {
     }
     foreach ($cart as $productId => $quantity) {
         $productId = (int) $productId;
-        if (!isset($summaryProducts[$productId])) {
-            $notice = 'A product in your cart is no longer available. Update your cart before checkout.';
+        if (
+            !isset($summaryProducts[$productId])
+            || !in_array((string) $summaryProducts[$productId]['category'], $platformOptions, true)
+        ) {
+            $notice = 'A game in your cart is no longer available. Update your cart before checkout.';
             $checkoutBlocked = true;
             continue;
         }
@@ -183,7 +191,7 @@ try {
         $product['unit_cents'] = (int) round((float) $product['price'] * 100);
         $product['subtotal_cents'] = $product['unit_cents'] * $product['quantity'];
         if ($product['quantity'] > (int) $product['stock_quantity']) {
-            $notice = 'A product in your cart has insufficient stock. Update your cart before checkout.';
+            $notice = 'A game in your cart has insufficient stock. Update your cart before checkout.';
             $checkoutBlocked = true;
         }
         $summary[] = $product;
@@ -201,7 +209,7 @@ require_once __DIR__ . '/header.php';
 <div class="mb-7">
     <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Almost yours</p>
     <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">Checkout</h1>
-    <p class="mt-2 text-slate-500">Add your details and review your order before placing it.</p>
+    <p class="mt-2 text-slate-500">Add your details and review your games before placing the order.</p>
     <ol class="mt-6 flex max-w-xl items-center gap-3 text-xs font-semibold sm:text-sm" aria-label="Checkout progress">
         <li class="flex items-center gap-2 text-emerald-700"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100">✓</span> Cart</li>
         <li class="h-px flex-1 bg-indigo-200" aria-hidden="true"></li>

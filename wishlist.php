@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+$platformOptions = require __DIR__ . '/game-platforms.php';
 
 if (empty($_SESSION['user_id'])) {
     header('Location: login.php?redirect=wishlist.php');
@@ -40,11 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($action === 'add') {
                 $productQuery = $pdo->prepare(
-                    'SELECT id FROM dbo.products WHERE id = :id'
+                    'SELECT id, category FROM dbo.products WHERE id = :id'
                 );
                 $productQuery->execute(['id' => $productId]);
-                if (!$productQuery->fetch()) {
-                    throw new InvalidArgumentException('That product could not be found.');
+                $product = $productQuery->fetch();
+                if (!$product || !in_array((string) $product['category'], $platformOptions, true)) {
+                    throw new InvalidArgumentException('That game could not be found.');
                 }
 
                 $existsQuery = $pdo->prepare(
@@ -58,13 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $insert->execute(['user_id' => $userId, 'product_id' => $productId]);
                 }
 
-                $_SESSION['flash_notice'] = 'Product saved to your wishlist.';
+                $_SESSION['flash_notice'] = 'Game saved to your wishlist.';
                 header('Location: wishlist.php');
                 exit;
             }
 
             $wishlistProduct = $pdo->prepare(
-                'SELECT w.id AS wishlist_id, p.id, p.stock_quantity
+                'SELECT w.id AS wishlist_id, p.id, p.stock_quantity, p.category
                  FROM dbo.wishlists AS w
                  INNER JOIN dbo.products AS p ON p.id = w.product_id
                  WHERE w.user_id = :user_id AND w.product_id = :product_id'
@@ -72,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $wishlistProduct->execute(['user_id' => $userId, 'product_id' => $productId]);
             $savedProduct = $wishlistProduct->fetch();
             if (!$savedProduct) {
-                throw new InvalidArgumentException('That product is not in your wishlist.');
+                throw new InvalidArgumentException('That game is not in your wishlist.');
             }
 
             if ($action === 'remove') {
@@ -80,16 +82,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'DELETE FROM dbo.wishlists WHERE id = :id AND user_id = :user_id'
                 );
                 $delete->execute(['id' => (int) $savedProduct['wishlist_id'], 'user_id' => $userId]);
-                $_SESSION['flash_notice'] = 'Product removed from your wishlist.';
+                $_SESSION['flash_notice'] = 'Game removed from your wishlist.';
                 header('Location: wishlist.php');
                 exit;
+            }
+
+            if (!in_array((string) $savedProduct['category'], $platformOptions, true)) {
+                throw new InvalidArgumentException('Only games can be moved to your cart.');
             }
 
             $stock = max(0, (int) $savedProduct['stock_quantity']);
             $cart = isset($_SESSION['cart']) && is_array($_SESSION['cart']) ? $_SESSION['cart'] : [];
             $currentQuantity = max(0, (int) ($cart[$productId] ?? 0));
             if ($stock < 1 || $currentQuantity >= $stock) {
-                throw new InvalidArgumentException('This product is not currently available in the requested quantity.');
+                throw new InvalidArgumentException('This game is not currently available in the requested quantity.');
             }
 
             $delete = $pdo->prepare(
@@ -98,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $delete->execute(['id' => (int) $savedProduct['wishlist_id'], 'user_id' => $userId]);
             $cart[$productId] = $currentQuantity + 1;
             $_SESSION['cart'] = $cart;
-            $_SESSION['flash_notice'] = 'Product moved to your cart.';
+            $_SESSION['flash_notice'] = 'Game moved to your cart.';
             header('Location: cart.php');
             exit;
         } catch (InvalidArgumentException $exception) {
@@ -140,10 +146,10 @@ require_once __DIR__ . '/header.php';
             <div>
                 <p class="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Saved for later</p>
                 <h1 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Your wishlist</h1>
-                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">Keep your favourites in one place and move them to your cart whenever you’re ready.</p>
+                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">Keep your favourite games in one place and move them to your cart whenever you’re ready.</p>
             </div>
             <?php if (!$databaseError): ?>
-                <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100"><?= e(count($products)) ?> saved <?= count($products) === 1 ? 'product' : 'products' ?></span>
+                <span class="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-slate-100"><?= e(count($products)) ?> saved <?= count($products) === 1 ? 'game' : 'games' ?></span>
             <?php endif; ?>
         </div>
     </div>
@@ -159,8 +165,8 @@ require_once __DIR__ . '/header.php';
             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
         </span>
         <h2 class="mt-4 text-xl font-bold text-slate-950">Your wishlist is ready for inspiration</h2>
-        <p class="mt-2 text-slate-500">Save products from the store and they’ll show up here.</p>
-        <a href="index.php" class="mt-5 inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white transition hover:bg-indigo-700">Browse products</a>
+        <p class="mt-2 text-slate-500">Save games from the library and they’ll show up here.</p>
+        <a href="index.php" class="mt-5 inline-flex rounded-xl bg-violet-700 px-5 py-3 font-bold text-white transition hover:bg-violet-800">Browse games</a>
     </section>
 <?php else: ?>
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -169,24 +175,30 @@ require_once __DIR__ . '/header.php';
             $imageUrl = isset($product['image_url']) ? (string) $product['image_url'] : '';
             $imageScheme = strtolower((string) parse_url($imageUrl, PHP_URL_SCHEME));
             $hasImage = $imageUrl !== '' && in_array($imageScheme, ['http', 'https'], true);
-            $inStock = (int) $product['stock_quantity'] > 0;
+            $isGame = in_array((string) $product['category'], $platformOptions, true);
+            $inStock = $isGame && (int) $product['stock_quantity'] > 0;
             ?>
-            <article class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl">
-                <div class="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50">
+            <article class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-violet-300 hover:shadow-xl">
+                <div class="relative aspect-[3/4] overflow-hidden bg-slate-950">
                     <?php if ($hasImage): ?>
-                        <img src="<?= e($imageUrl) ?>" alt="<?= e($product['name']) ?>" loading="lazy" class="h-full w-full object-contain p-5 transition duration-300 group-hover:scale-105">
+                        <img src="<?= e($imageUrl) ?>" alt="Game artwork for <?= e($product['name']) ?>" loading="lazy" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
                     <?php else: ?>
-                        <div class="flex h-full items-center justify-center text-sm text-slate-400">Image unavailable</div>
+                        <div class="relative flex h-full flex-col justify-end overflow-hidden bg-gradient-to-br from-fuchsia-700 via-violet-900 to-slate-950 p-5 text-white">
+                            <div class="absolute -right-10 top-12 h-40 w-40 rounded-full border-[18px] border-white/10"></div>
+                            <span class="relative text-[9px] font-bold uppercase tracking-[0.2em] text-violet-200"><?= e($product['category'] ?: 'Console game') ?></span>
+                            <span class="relative mt-2 text-2xl font-black leading-tight"><?= e($product['name']) ?></span>
+                            <span class="relative mt-3 text-[9px] font-bold uppercase tracking-[0.2em] text-white/60">Add game art in admin</span>
+                        </div>
                     <?php endif; ?>
                     <?php if (!empty($product['category'])): ?>
-                        <span class="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"><?= e($product['category']) ?></span>
+                        <span class="absolute left-3 top-3 rounded-full border border-white/20 bg-slate-950/80 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm"><?= e($product['category']) ?></span>
                     <?php endif; ?>
                 </div>
                 <div class="p-5">
                     <div class="flex items-start justify-between gap-3">
                         <h2 class="font-semibold text-slate-900"><?= e($product['name']) ?></h2>
-                        <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold <?= $inStock ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' ?>">
-                            <?= $inStock ? 'AVAILABLE' : 'SOLD OUT' ?>
+                        <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide <?= $inStock ? 'bg-lime-100 text-lime-800' : 'bg-slate-100 text-slate-500' ?>">
+                            <?= !$isGame ? 'Not in store' : ($inStock ? 'In stock' : 'Sold out') ?>
                         </span>
                     </div>
                     <p class="mt-3 text-2xl font-extrabold tracking-tight text-slate-950">$<?= e(number_format((float) $product['price'], 2)) ?></p>
@@ -195,8 +207,8 @@ require_once __DIR__ . '/header.php';
                             <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
                             <input type="hidden" name="action" value="move_to_cart">
                             <input type="hidden" name="product_id" value="<?= e($product['id']) ?>">
-                            <button type="submit" <?= !$inStock ? 'disabled' : '' ?> class="w-full rounded-xl bg-indigo-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">
-                                Move to cart
+                            <button type="submit" <?= !$inStock ? 'disabled' : '' ?> class="w-full rounded-xl bg-violet-700 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+                                <?= $isGame ? 'Move to cart' : 'Not in store' ?>
                             </button>
                         </form>
                         <form action="wishlist.php" method="post">

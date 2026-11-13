@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+$platformOptions = require __DIR__ . '/game-platforms.php';
 
 if (($_SESSION['role'] ?? '') !== 'admin' || empty($_SESSION['user_id'])) {
     http_response_code(403);
@@ -66,22 +67,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($action === 'add_product') {
                 $name = trim((string) ($_POST['name'] ?? ''));
+                $description = trim((string) ($_POST['description'] ?? ''));
                 $price = filter_var($_POST['price'] ?? null, FILTER_VALIDATE_FLOAT);
                 $stock = filter_var($_POST['stock_quantity'] ?? null, FILTER_VALIDATE_INT);
                 $category = trim((string) ($_POST['category'] ?? ''));
                 $imageUrl = trim((string) ($_POST['image_url'] ?? ''));
 
                 if ($name === '' || mb_strlen($name) > 150) {
-                    throw new InvalidArgumentException('Product name is required and must be 150 characters or fewer.');
+                    throw new InvalidArgumentException('Game title is required and must be 150 characters or fewer.');
+                }
+                if (mb_strlen($description) > 500) {
+                    throw new InvalidArgumentException('Game description must be 500 characters or fewer.');
                 }
                 if ($price === false || $price < 0 || $price > 99999999.99) {
-                    throw new InvalidArgumentException('Enter a valid product price.');
+                    throw new InvalidArgumentException('Enter a valid game price.');
                 }
                 if ($stock === false || $stock < 0) {
                     throw new InvalidArgumentException('Stock quantity must be zero or greater.');
                 }
                 if (mb_strlen($category) > 50) {
-                    throw new InvalidArgumentException('Category must be 50 characters or fewer.');
+                    throw new InvalidArgumentException('Platform must be 50 characters or fewer.');
+                }
+                if (!in_array($category, $platformOptions, true)) {
+                    throw new InvalidArgumentException('Choose a platform for this game.');
                 }
                 if ($imageUrl !== '') {
                     $scheme = strtolower((string) parse_url($imageUrl, PHP_URL_SCHEME));
@@ -98,13 +106,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $insert->execute([
                     'name' => $name,
-                    'description' => '',
+                    'description' => $description,
                     'price' => number_format((float) $price, 2, '.', ''),
                     'stock_quantity' => $stock,
                     'category' => $category === '' ? null : $category,
                     'image_url' => $imageUrl === '' ? null : $imageUrl,
                 ]);
-                $_SESSION['flash_notice'] = 'Product added to the catalog.';
+                $_SESSION['flash_notice'] = 'Game added to the library.';
                 header('Location: admin.php');
                 exit;
             }
@@ -156,9 +164,9 @@ require_once __DIR__ . '/header.php';
 <div class="relative mb-8 overflow-hidden rounded-3xl bg-slate-950 px-6 py-8 text-white shadow-lg sm:px-9 sm:py-10">
     <div class="absolute -right-10 -top-20 h-56 w-56 rounded-full bg-indigo-500/30 blur-3xl"></div>
     <div class="relative">
-        <p class="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">CloudCart management</p>
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">GameGrid management</p>
         <h1 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Admin dashboard</h1>
-        <p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">A quick view of your orders and a simple way to add to the catalog.</p>
+        <p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">A quick view of orders and a simple way to build your game library.</p>
     </div>
 </div>
 
@@ -188,15 +196,28 @@ require_once __DIR__ . '/header.php';
 
 <section class="mb-10 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/60 px-6 py-5">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Catalog management</p>
-        <h2 class="mt-1 text-xl font-bold text-slate-950">Add a product</h2>
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Game library</p>
+        <h2 class="mt-1 text-xl font-bold text-slate-950">Add a game</h2>
     </div>
     <div class="p-6">
-    <form action="admin.php" method="post" class="mt-5 grid gap-4 sm:grid-cols-2">
+    <div class="mb-7 rounded-2xl border border-violet-100 bg-violet-50/60 p-5">
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <div class="flex-1">
+                <label for="rawg-search" class="mb-1.5 block text-sm font-bold text-slate-800">Find a game with RAWG</label>
+                <input id="rawg-search" type="search" maxlength="80" placeholder="Search popular games by title..." class="w-full rounded-xl border border-violet-200 bg-white px-3.5 py-3 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100">
+            </div>
+            <button id="rawg-search-button" type="button" class="self-end rounded-xl bg-violet-700 px-5 py-3 font-bold text-white transition hover:bg-violet-800">Search games</button>
+        </div>
+        <p class="mt-2 text-xs leading-5 text-slate-500">Choose a result to fill its title, platform, and artwork URL. Set your own selling price and stock before adding it.</p>
+        <div id="rawg-search-status" class="mt-3 text-sm text-slate-600" role="status" aria-live="polite"></div>
+        <div id="rawg-search-results" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </div>
+
+    <form action="admin.php" method="post" class="grid gap-4 sm:grid-cols-2">
         <input type="hidden" name="csrf_token" value="<?= e($_SESSION['csrf_token']) ?>">
         <input type="hidden" name="action" value="add_product">
         <div>
-            <label for="name" class="mb-1.5 block text-sm font-semibold text-slate-700">Product name</label>
+            <label for="name" class="mb-1.5 block text-sm font-semibold text-slate-700">Game title</label>
             <input id="name" name="name" maxlength="150" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
         <div>
@@ -208,19 +229,164 @@ require_once __DIR__ . '/header.php';
             <input id="stock_quantity" name="stock_quantity" type="number" min="0" step="1" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
         </div>
         <div>
-            <label for="category" class="mb-1.5 block text-sm font-semibold text-slate-700">Category</label>
-            <input id="category" name="category" maxlength="50" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
+            <label for="category" class="mb-1.5 block text-sm font-semibold text-slate-700">Platform</label>
+            <select id="category" name="category" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
+                <option value="">Select platform</option>
+                <?php foreach ($platformOptions as $platform): ?>
+                    <option value="<?= e($platform) ?>"><?= e($platform) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div>
+            <label for="description" class="mb-1.5 block text-sm font-semibold text-slate-700">Short description <span class="font-normal text-slate-400">(optional)</span></label>
+            <textarea id="description" name="description" maxlength="500" rows="3" placeholder="Genre, edition, or a short store description" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100"></textarea>
+        </div>
+        <div>
+            <label for="image_url" class="mb-1.5 block text-sm font-semibold text-slate-700">Game artwork URL</label>
+            <input id="image_url" name="image_url" type="url" maxlength="500" placeholder="Choose a RAWG result or paste a licensed HTTPS image URL" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
+            <p class="mt-1 text-xs text-slate-400">Use artwork you have permission to display.</p>
         </div>
         <div class="sm:col-span-2">
-            <label for="image_url" class="mb-1.5 block text-sm font-semibold text-slate-700">Image URL</label>
-            <input id="image_url" name="image_url" type="url" maxlength="500" placeholder="https://..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-3 outline-none transition focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-100">
-        </div>
-        <div class="sm:col-span-2">
-            <button type="submit" <?= $databaseError ? 'disabled' : '' ?> class="rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">Add product</button>
+            <button type="submit" <?= $databaseError ? 'disabled' : '' ?> class="rounded-xl bg-violet-700 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-slate-300">Add game to library</button>
         </div>
     </form>
     </div>
 </section>
+
+<script>
+(() => {
+    const searchInput = document.getElementById('rawg-search');
+    const searchButton = document.getElementById('rawg-search-button');
+    const status = document.getElementById('rawg-search-status');
+    const resultsContainer = document.getElementById('rawg-search-results');
+    const titleInput = document.getElementById('name');
+    const platformInput = document.getElementById('category');
+    const imageInput = document.getElementById('image_url');
+    const supportedPlatforms = Array.from(platformInput?.options || []).map((option) => option.value);
+    const platformAliases = {
+        'pc': 'PC',
+        'playstation': 'PlayStation',
+        'playstation 2': 'PlayStation 2',
+        'playstation 3': 'PlayStation 3',
+        'playstation 4': 'PlayStation 4',
+        'playstation 5': 'PlayStation 5',
+        'playstation vita': 'PlayStation Vita',
+        'ps vita': 'PlayStation Vita',
+        'playstation portable': 'PSP',
+        'psp': 'PSP',
+        'xbox': 'Xbox',
+        'xbox 360': 'Xbox 360',
+        'xbox one': 'Xbox One',
+        'xbox series s x': 'Xbox Series X|S',
+        'xbox series x s': 'Xbox Series X|S',
+        'nintendo ds': 'Nintendo DS',
+        'nintendo 3ds': 'Nintendo 3DS',
+        'nintendo switch': 'Nintendo Switch',
+        'nintendo switch 2': 'Nintendo Switch 2',
+        'nintendo gamecube': 'Nintendo GameCube',
+        'gamecube': 'Nintendo GameCube',
+        'nintendo 64': 'Nintendo 64',
+        'wii': 'Wii',
+        'wii u': 'Wii U',
+        'game boy advance': 'Game Boy Advance',
+        'game boy color': 'Game Boy Color',
+        'game boy': 'Game Boy',
+        'sega dreamcast': 'Sega Dreamcast',
+    };
+
+    if (!searchInput || !searchButton || !status || !resultsContainer || !titleInput || !platformInput || !imageInput) {
+        return;
+    }
+
+    const renderResults = (games) => {
+        resultsContainer.replaceChildren();
+        for (const game of games) {
+            const card = document.createElement('article');
+            card.className = 'flex gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm';
+
+            if (game.image_url) {
+                const image = document.createElement('img');
+                image.src = game.image_url;
+                image.alt = '';
+                image.loading = 'lazy';
+                image.className = 'h-24 w-16 shrink-0 rounded-lg bg-slate-100 object-cover';
+                card.append(image);
+            }
+
+            const details = document.createElement('div');
+            details.className = 'min-w-0 flex-1';
+            const title = document.createElement('h3');
+            title.className = 'font-bold leading-5 text-slate-900';
+            title.textContent = game.name;
+            const metadata = document.createElement('p');
+            metadata.className = 'mt-1 line-clamp-2 text-xs leading-4 text-slate-500';
+            const metadataParts = [];
+            if (game.released) metadataParts.push(game.released);
+            if (typeof game.rating === 'number') metadataParts.push(`RAWG ${game.rating.toFixed(1)}/5`);
+            if (game.platforms?.length) metadataParts.push(game.platforms.join(', '));
+            metadata.textContent = metadataParts.join(' · ') || 'Platforms not listed';
+            const selectButton = document.createElement('button');
+            selectButton.type = 'button';
+            selectButton.className = 'mt-2 rounded-lg bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-800 transition hover:bg-violet-200';
+            selectButton.textContent = 'Use this game';
+            selectButton.addEventListener('click', () => {
+                titleInput.value = game.name;
+                const normalizedPlatforms = (game.platforms || []).map((platform) =>
+                    platform.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+                );
+                platformInput.value = normalizedPlatforms
+                    .map((platform) => platformAliases[platform])
+                    .find((platform) => supportedPlatforms.includes(platform)) || '';
+                imageInput.value = game.image_url || '';
+                status.textContent = platformInput.value
+                    ? `${game.name} selected. Add a price and stock quantity to list it.`
+                    : `${game.name} selected. Choose a supported platform, then add a price and stock quantity.`;
+                titleInput.focus();
+            });
+            details.append(title, metadata, selectButton);
+            card.append(details);
+            resultsContainer.append(card);
+        }
+    };
+
+    const searchGames = async () => {
+        const query = searchInput.value.trim();
+        const params = new URLSearchParams();
+        if (query) params.set('q', query);
+        searchButton.disabled = true;
+        searchButton.textContent = 'Searching…';
+        status.textContent = 'Loading popular games…';
+        resultsContainer.replaceChildren();
+
+        try {
+            const response = await fetch(`rawg-search.php?${params.toString()}`, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.error || 'Game search is unavailable.');
+            renderResults(payload.results || []);
+            status.textContent = payload.results?.length
+                ? `Showing ${payload.results.length} games.`
+                : 'No games found. Try another title.';
+        } catch (error) {
+            status.textContent = error instanceof Error ? error.message : 'Game search is unavailable.';
+        } finally {
+            searchButton.disabled = false;
+            searchButton.textContent = 'Search games';
+        }
+    };
+
+    searchButton.addEventListener('click', searchGames);
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            searchGames();
+        }
+    });
+    searchGames();
+})();
+</script>
 
 <section>
     <div class="mb-4 flex flex-wrap items-end justify-between gap-4">

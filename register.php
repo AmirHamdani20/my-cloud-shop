@@ -68,15 +68,15 @@ require_once __DIR__ . '/header.php';
             <h2 class="mt-5 text-3xl font-black leading-tight">A little more personal. A lot more convenient.</h2>
         </div>
         <div class="relative mt-10 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-            <p class="text-sm leading-6 text-slate-300">Create an account to save favourites and keep an eye on your orders.</p>
-            <a href="index.php" class="mt-4 inline-flex text-sm font-bold text-cyan-300 hover:text-cyan-200">Browse the collection <span class="ml-1" aria-hidden="true">→</span></a>
+            <p class="text-sm leading-6 text-slate-300">Create an account to save games and keep an eye on your orders.</p>
+            <a href="index.php" class="mt-4 inline-flex text-sm font-bold text-cyan-300 hover:text-cyan-200">Browse the game library <span class="ml-1" aria-hidden="true">→</span></a>
         </div>
     </aside>
     <div class="p-7 sm:p-10 lg:p-12">
     <div class="mb-7">
-        <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Join CloudCart</p>
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Join GameGrid</p>
         <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Create your account</h1>
-        <p class="mt-2 text-sm text-slate-500">Keep track of the products and orders that matter to you.</p>
+        <p class="mt-2 text-sm text-slate-500">Keep track of your games and orders in one place.</p>
     </div>
 
     <?php if ($notice !== ''): ?>

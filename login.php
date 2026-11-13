@@ -77,19 +77,19 @@ require_once __DIR__ . '/header.php';
     <aside class="relative hidden overflow-hidden bg-slate-950 p-9 text-white md:flex md:flex-col md:justify-between lg:p-11">
         <div class="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-indigo-600/40 blur-3xl"></div>
         <div class="relative">
-            <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Your CloudCart account</p>
-            <h2 class="mt-5 text-3xl font-black leading-tight">Your next great find is just a sign in away.</h2>
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Your GameGrid account</p>
+            <h2 class="mt-5 text-3xl font-black leading-tight">Your next great game is just a sign in away.</h2>
         </div>
         <div class="relative mt-10 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-            <p class="text-sm leading-6 text-slate-300">Keep your saved products close and pick up where you left off.</p>
-            <a href="index.php" class="mt-4 inline-flex text-sm font-bold text-cyan-300 hover:text-cyan-200">Explore the shop <span class="ml-1" aria-hidden="true">→</span></a>
+            <p class="text-sm leading-6 text-slate-300">Keep your saved games close and pick up where you left off.</p>
+            <a href="index.php" class="mt-4 inline-flex text-sm font-bold text-cyan-300 hover:text-cyan-200">Browse games <span class="ml-1" aria-hidden="true">→</span></a>
         </div>
     </aside>
     <div class="p-7 sm:p-10 lg:p-12">
     <div class="mb-7">
-        <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Good to see you</p>
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Player sign in</p>
         <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Welcome back</h1>
-        <p class="mt-2 text-sm text-slate-500">Sign in to manage your CloudCart account.</p>
+        <p class="mt-2 text-sm text-slate-500">Sign in to manage your GameGrid account.</p>
     </div>
 
     <?php if ($notice !== ''): ?>

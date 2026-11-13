@@ -108,7 +108,7 @@ require_once __DIR__ . '/header.php';
             <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50 p-5 sm:p-6">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.15em] text-indigo-600">CloudCart order</p>
+                        <p class="text-xs font-bold uppercase tracking-[0.15em] text-indigo-600">GameGrid order</p>
                         <h2 class="mt-1 text-lg font-bold text-slate-950">#<?= e($order['id']) ?></h2>
                         <p class="mt-1 text-sm text-slate-500"><?= e($orderDate) ?></p>
                     </div>
@@ -155,7 +155,7 @@ require_once __DIR__ . '/header.php';
                             <?php foreach ($order['items'] as $item): ?>
                                 <li class="flex flex-wrap justify-between gap-2 py-3 text-sm">
                                     <span class="text-slate-700">
-                                        <?= e($item['product_name'] ?? ('Product #' . $item['product_id'])) ?>
+                                        <?= e($item['product_name'] ?? ('Game #' . $item['product_id'])) ?>
                                         <span class="text-slate-400">× <?= e($item['quantity']) ?></span>
                                     </span>
                                     <span class="font-medium text-slate-900">$<?= e(number_format((float) $item['unit_price'] * (int) $item['quantity'], 2)) ?></span>

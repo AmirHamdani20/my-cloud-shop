@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
+$platformOptions = require __DIR__ . '/game-platforms.php';
 
 $notice = '';
 $noticeType = 'success';
@@ -43,31 +44,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
 
             if ($action === 'remove') {
                 if (!$productId || $productId < 1) {
-                    throw new InvalidArgumentException('Choose a valid product.');
+                    throw new InvalidArgumentException('Choose a valid game.');
                 }
                 unset($_SESSION['cart'][$productId]);
-                $_SESSION['flash_notice'] = 'Product removed from your cart.';
+                $_SESSION['flash_notice'] = 'Game removed from your cart.';
                 header('Location: cart.php');
                 exit;
             }
 
             if ($action === 'add' || $action === 'update_qty') {
                 if (!$productId || $productId < 1) {
-                    throw new InvalidArgumentException('Choose a valid product.');
+                    throw new InvalidArgumentException('Choose a valid game.');
                 }
                 if ($databaseError) {
                     throw new RuntimeException('The store database is unavailable.');
                 }
 
                 $productQuery = $pdo->prepare(
-                    'SELECT id, stock_quantity FROM dbo.products WHERE id = :id'
+                    'SELECT id, stock_quantity, category FROM dbo.products WHERE id = :id'
                 );
                 $productQuery->execute(['id' => $productId]);
                 $product = $productQuery->fetch();
 
-                if (!$product) {
+                if (!$product || !in_array((string) $product['category'], $platformOptions, true)) {
                     unset($_SESSION['cart'][$productId]);
-                    throw new InvalidArgumentException('That product is no longer available.');
+                    throw new InvalidArgumentException('That game is no longer available in this store.');
                 }
 
                 $stock = max(0, (int) $product['stock_quantity']);
@@ -80,20 +81,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                     }
                     if ($quantity === 0) {
                         unset($_SESSION['cart'][$productId]);
-                        $_SESSION['flash_notice'] = 'Product removed from your cart.';
+                        $_SESSION['flash_notice'] = 'Game removed from your cart.';
                         header('Location: cart.php');
                         exit;
                     }
                 }
 
                 if ($stock < 1 || $quantity > $stock) {
-                    throw new InvalidArgumentException('The requested quantity is not available in stock.');
+                    throw new InvalidArgumentException('That quantity is not available in stock.');
                 }
 
                 $_SESSION['cart'][$productId] = $quantity;
                 $_SESSION['flash_notice'] = $action === 'add'
-                    ? 'Product added to your cart.'
-                    : 'Cart quantity updated.';
+                    ? 'Game added to your cart.'
+                    : 'Game quantity updated.';
                 header('Location: cart.php');
                 exit;
             }
@@ -124,7 +125,7 @@ if ($cart && !$databaseError) {
             $parameters[$parameterName] = $id;
         }
         $query = $pdo->prepare(
-            'SELECT id, name, price, stock_quantity, image_url
+            'SELECT id, name, price, stock_quantity, image_url, category
              FROM dbo.products WHERE id IN (' . implode(', ', $placeholders) . ')'
         );
         $query->execute($parameters);
@@ -140,6 +141,10 @@ if ($cart && !$databaseError) {
                 continue;
             }
             $product = $products[$id];
+            if (!in_array((string) $product['category'], $platformOptions, true)) {
+                unset($_SESSION['cart'][$id]);
+                continue;
+            }
             $price = number_format((float) $product['price'], 2, '.', '');
             $unitCents = (int) round((float) $price * 100);
             $product['quantity'] = (int) $quantity;
@@ -161,7 +166,7 @@ require_once __DIR__ . '/header.php';
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-600">Your picks, all together</p>
             <h1 class="mt-2 text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">Shopping cart</h1>
-            <p class="mt-2 text-slate-500">Review your items before you head to checkout.</p>
+            <p class="mt-2 text-slate-500">Review your games before you head to checkout.</p>
         </div>
         <a href="index.php" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:text-indigo-700">
             <span aria-hidden="true">←</span> Keep browsing
@@ -184,16 +189,16 @@ require_once __DIR__ . '/header.php';
             <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm" aria-hidden="true">
                 <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l2.2 11.2a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 2-1.6L22 7H6M10 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"/></svg>
             </span>
-            <h2 class="mt-5 text-2xl font-bold text-slate-950">Your cart is waiting for something good</h2>
-            <p class="mx-auto mt-2 max-w-md text-slate-500">Browse the collection and add something you love. Your picks will be saved here.</p>
-            <a href="index.php" class="mt-6 inline-flex rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-indigo-700">Explore the shop</a>
+            <h2 class="mt-5 text-2xl font-bold text-slate-950">Your next game belongs here</h2>
+            <p class="mx-auto mt-2 max-w-md text-slate-500">Browse the library and add a new adventure. Your games will be saved here.</p>
+            <a href="index.php" class="mt-6 inline-flex rounded-xl bg-violet-700 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-violet-800">Browse games</a>
         </div>
     </section>
 <?php else: ?>
     <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
-                <h2 class="font-bold text-slate-950"><?= e(count($items)) ?> <?= count($items) === 1 ? 'product' : 'products' ?> in your cart</h2>
+                <h2 class="font-bold text-slate-950"><?= e(count($items)) ?> <?= count($items) === 1 ? 'game' : 'games' ?> in your cart</h2>
                 <span class="text-xs font-medium text-slate-400">Prices in USD</span>
             </div>
             <ul class="divide-y divide-slate-100">
@@ -262,7 +267,7 @@ require_once __DIR__ . '/header.php';
                 <span class="text-xl font-extrabold text-slate-950">$<?= e(number_format($totalCents / 100, 2)) ?></span>
             </div>
             <p class="text-xs leading-5 text-slate-400">Checkout and payment are simulated for this demo.</p>
-            <a href="checkout.php" class="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700">
+            <a href="checkout.php" class="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-700 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-violet-800">
                 Continue to checkout <span aria-hidden="true">→</span>
             </a>
             <div class="mt-5 flex items-center justify-center gap-2 border-t border-slate-100 pt-4 text-xs text-slate-400">
