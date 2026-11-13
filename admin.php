@@ -471,6 +471,7 @@ require_once __DIR__ . '/header.php';
     const supportedPlatforms = Array.from(platformInput?.options || []).map((option) => option.value);
     const platformAliases = {
         'pc': 'PC',
+        'pc gaming': 'PC Gaming',
         'playstation': 'PlayStation',
         'playstation 2': 'PlayStation 2',
         'playstation 3': 'PlayStation 3',
@@ -483,6 +484,7 @@ require_once __DIR__ . '/header.php';
         'xbox': 'Xbox',
         'xbox 360': 'Xbox 360',
         'xbox one': 'Xbox One',
+        'xbox series x': 'Xbox Series X',
         'xbox series s x': 'Xbox Series X|S',
         'xbox series x s': 'Xbox Series X|S',
         'nintendo ds': 'Nintendo DS',

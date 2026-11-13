@@ -9,6 +9,7 @@ return [
     'PlayStation',
     'PlayStation Vita',
     'PSP',
+    'Xbox Series X',
     'Xbox Series X|S',
     'Xbox One',
     'Xbox 360',
@@ -26,4 +27,5 @@ return [
     'Game Boy',
     'Sega Dreamcast',
     'PC',
+    'PC Gaming',
 ];

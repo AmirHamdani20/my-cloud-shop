@@ -443,26 +443,18 @@ $userName = (string) ($_SESSION['name'] ?? 'My Account');
                     $inStock = (int) $product['stock_quantity'] > 0;
                     ?>
                     <article class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-violet-300 hover:shadow-xl">
-                        <div class="relative aspect-[7/10] overflow-hidden bg-slate-950">
+                        <div class="relative aspect-video overflow-hidden bg-slate-50 p-3">
                             <?php if ($imageUrl !== null): ?>
-                                <img src="<?= h($imageUrl) ?>" alt="Game artwork for <?= h($product['name']) ?>" loading="lazy" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                                <img src="<?= h($imageUrl) ?>" alt="Artwork for <?= h($product['name']) ?>" loading="lazy" class="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]">
                             <?php else: ?>
-                                <div class="relative flex h-full flex-col justify-between overflow-hidden bg-gradient-to-br from-fuchsia-700 via-violet-900 to-slate-950 p-5 text-white">
-                                    <div class="absolute -right-10 top-12 h-40 w-40 rounded-full border-[18px] border-white/10"></div>
-                                    <div class="absolute -bottom-12 -left-8 h-44 w-44 rotate-12 border border-lime-200/20 bg-lime-300/10"></div>
-                                    <div class="relative flex items-center justify-between">
-                                        <span class="rounded-full border border-white/20 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em]">GameGrid</span>
-                                        <span class="text-lg text-lime-300" aria-hidden="true">✦</span>
-                                    </div>
-                                    <div class="relative">
-                                        <span class="text-[9px] font-bold uppercase tracking-[0.2em] text-violet-200"><?= h($product['category'] ?: 'Console game') ?></span>
-                                        <h3 class="mt-2 text-2xl font-black leading-tight tracking-tight sm:text-3xl"><?= h($product['name']) ?></h3>
-                                        <p class="mt-3 text-[9px] font-bold uppercase tracking-[0.22em] text-white/60">Add game art in admin</p>
-                                    </div>
+                                <div class="flex h-full flex-col items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-100 p-5 text-center text-indigo-900">
+                                    <svg class="h-10 w-10 text-violet-700" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M17 12h14a8 8 0 0 1 7.7 5.8l3 10.5A5 5 0 0 1 37 34h-1.6a5 5 0 0 1-3.9-1.9L29 29H19l-2.5 3.1a5 5 0 0 1-3.9 1.9H11a5 5 0 0 1-4.8-6.3l3-10.5A8 8 0 0 1 17 12Z"/><path d="M16 19v8m-4-4h8m12-2h.01M36 25h.01"/></svg>
+                                    <span class="mt-3 text-xs font-bold uppercase tracking-wider text-violet-700"><?= h($product['category'] ?: 'Game') ?></span>
+                                    <h3 class="mt-1 line-clamp-2 font-bold"><?= h($product['name']) ?></h3>
                                 </div>
                             <?php endif; ?>
                             <?php if (!empty($product['category'])): ?>
-                                <span class="absolute left-3 top-3 rounded-full border border-white/20 bg-slate-950/80 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm"><?= h($product['category']) ?></span>
+                                <span class="absolute left-3 top-3 rounded-full border border-slate-200 bg-white/95 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-700 shadow-sm"><?= h($product['category']) ?></span>
                             <?php endif; ?>
                         </div>
                         <div class="p-5">
